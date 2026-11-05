@@ -148,7 +148,9 @@ jobs:
               // head commit blocks even if a summary says otherwise.
               function reviewState({ labels, feedback, headSha }) {
                 if (labels.includes('review:blocking')) return 'blocking';
-                const findings = feedback.filter((x) => VERDICT_BOTS.has(x.author) && x.commitId === headSha && BLOCKING_FINDING.test(x.body || ''));
+                // Codex's summary tracks whether its findings are resolved, so it is
+                // authoritative for Codex; raw P0/P1 line findings only count for others.
+                const findings = feedback.filter((x) => VERDICT_BOTS.has(x.author) && x.author !== CODEX_BOT && x.commitId === headSha && BLOCKING_FINDING.test(x.body || ''));
                 const verdicts = feedback.map((x) => verdictFor(x, headSha)).filter(Boolean);
                 if (findings.length || verdicts.includes('blocking')) return 'blocking';
                 if (verdicts.includes('pending')) return 'missing';
@@ -162,29 +164,36 @@ jobs:
               // unlike commit statuses they are tied to the PR), and (b) the latest force
               // push. Any new push needs a new approval; re-adding the label after a force
               // push restores it.
-              function humanApproved({ labels, labelEvents, owner, headAdoptedAt, forcePushTimes = [] }) {
-                if (!labels.includes('human-approved') || !headAdoptedAt) return false;
+              function ownerLabelled(name, { labels, labelEvents, owner, headAdoptedAt, forcePushTimes = [] }) {
+                if (!labels.includes(name) || !headAdoptedAt) return false;
                 const threshold = [headAdoptedAt, ...forcePushTimes].sort().at(-1);
-                const last = labelEvents.filter((e) => e.event === 'labeled' && e.label === 'human-approved').at(-1);
+                const last = labelEvents.filter((e) => e.event === 'labeled' && e.label === name).at(-1);
                 return !!last && last.actor === owner && !last.viaApp && last.at > threshold;
               }
+              const humanApproved = (input) => ownerLabelled('human-approved', input);
+              // Reviewers can be wrong. The owner can overrule blocking findings for the
+              // current commit with `review:override`, under the same rules as approval.
+              // It does not replace approval for risk:normal PRs.
+              const reviewOverridden = (input) => ownerLabelled('review:override', input);
 
               function decide(input) {
                 const { risk, reasons } = classify(input);
-                const review = reviewState(input);
+                const raw = reviewState(input);
+                const overridden = raw === 'blocking' && reviewOverridden(input);
+                const review = overridden ? 'clear' : raw;
                 const approved = humanApproved(input);
                 let state; let description;
                 if (input.draft) { state = 'pending'; description = 'Draft PR'; }
                 else if (review === 'blocking') { state = 'failure'; description = 'Reviewer found P0/P1 issues on this commit (or review:blocking)'; }
                 else if (review === 'missing') { state = 'pending'; description = 'Waiting for a completed review of this commit'; }
-                else if (risk === 'low') { state = 'success'; description = 'risk:low and reviewed'; }
-                else if (approved) { state = 'success'; description = 'human-approved and reviewed'; }
+                else if (risk === 'low') { state = 'success'; description = overridden ? 'risk:low; review findings overridden by owner' : 'risk:low and reviewed'; }
+                else if (approved) { state = 'success'; description = overridden ? 'human-approved; review findings overridden by owner' : 'human-approved and reviewed'; }
                 else if (input.labels.includes('human-approved')) { state = 'pending'; description = 'risk:normal: approval predates this commit; remove and re-add human-approved'; }
                 else { state = 'pending'; description = 'risk:normal: waiting for human-approved'; }
-                return { risk, reasons, review, approved, state, description };
+                return { risk, reasons, review, overridden, approved, state, description };
               }
 
-              module.exports = { ACTIONS_BOT, classify, classifyFile, isPatchBump, verdictFor, reviewState, humanApproved, decide };
+              module.exports = { ACTIONS_BOT, classify, classifyFile, isPatchBump, verdictFor, reviewState, humanApproved, reviewOverridden, decide };
 
               return module.exports; })();
             const { owner, repo } = context.repo;
