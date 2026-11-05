@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(/.github/**)",
+      "Write(/.github/**)",
+      "MultiEdit(/.github/**)",
+      "NotebookEdit(/.github/**)"
+    ]
+  }
+}

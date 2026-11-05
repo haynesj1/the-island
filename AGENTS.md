@@ -18,7 +18,7 @@ A mobile-friendly web app of story-based guided relaxation sessions set in place
 
 **Product questions.** If the issue or its spec doesn't answer a product question (wording, flow, what to show or leave out), don't guess. Open an issue labelled `decision` with 2–3 options and a recommendation, link it from the PR, and finish only the parts that don't depend on it. Read `docs/vision.md` (where it exists) before any user-facing change.
 
-**Never edit**: `.github/**`, `AGENTS.md`, `CLAUDE.md`, `.ops.yml`, `.claude/**`, `docs/vision.md`, `docs/decisions/**`, `specs/**`, unless the issue explicitly asks for it. Never add, remove or change labels `human-approved`, `review:clear` or `review:blocking`. Never commit secrets, personal data (names, emails, habits, goals, health data) or generated artifacts.
+**Never edit**: `.github/**`, `AGENTS.md`, `CLAUDE.md`, `.ops.yml`, `.claude/**`, `docs/vision.md`, `docs/decisions/**`, `specs/**`, unless the issue explicitly asks for it. Never add, remove or change the labels `human-approved`, `review:override` or `review:blocking`, and never resolve review threads: those are the owner's decisions. Never commit secrets, personal data (names, emails, habits, goals, health data) or generated artifacts.
 
 **Before opening the PR**: run the verify command from `.ops.yml` and paste its result in the PR description. For UI changes, attach screenshots at 375px and 1280px wide. Then enable auto-merge: `gh pr merge --auto --squash`. The `review-gate` check decides whether it may merge.
 
