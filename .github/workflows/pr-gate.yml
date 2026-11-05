@@ -114,10 +114,14 @@ jobs:
                 if (!m) return null;
                 let review;
                 try { review = JSON.parse(m[1]).code_review; } catch { return 'missing'; }
-                if (!review || (headSha && review.commit_sha && review.commit_sha !== headSha)) return 'missing';
-                if (/^(running|queued|pending|in_progress)$/i.test(review.status || '')) return 'missing';
+                if (!review) return 'missing';
+                // A summary for another commit says nothing about the head: ignore it, so it
+                // can neither clear the gate nor block a fresh review from another reviewer.
+                if (!headSha || review.commit_sha !== headSha) return null;
                 if (review.has_unresolved_findings === true) return 'blocking';
-                if (review.has_unresolved_findings === false) return 'clear';
+                // Only an explicitly successful, finished review can clear the gate; failed,
+                // cancelled, running or unknown states wait.
+                if (/^(completed|succeeded|success)$/i.test(review.status || '') && review.has_unresolved_findings === false) return 'clear';
                 return 'missing';
               }
 
