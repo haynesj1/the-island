@@ -8,7 +8,7 @@ on:
   pull_request_review:
     types: [submitted, dismissed]
   issue_comment:
-    types: [created]
+    types: [created, edited]   # Codex edits its summary comment as the review progresses
   workflow_dispatch:
     inputs:
       pr:
@@ -106,14 +106,34 @@ jobs:
                 return !!last && last.actor === owner && !last.viaApp;
               }
 
+              // Codex keeps one summary comment per PR with a machine-readable state, e.g.
+              // <!-- codex-review-state:v1 {"code_review":{"commit_sha":"…","has_unresolved_findings":false,"status":"running"}} -->
+              const CODEX_STATE = /<!--\s*codex-review-state:v1\s*(\{[\s\S]*?\})\s*-->/;
+              function codexReview(body, headSha) {
+                const m = CODEX_STATE.exec(body || '');
+                if (!m) return null;
+                let review;
+                try { review = JSON.parse(m[1]).code_review; } catch { return 'missing'; }
+                if (!review || (headSha && review.commit_sha && review.commit_sha !== headSha)) return 'missing';
+                if (/^(running|queued|pending|in_progress)$/i.test(review.status || '')) return 'missing';
+                if (review.has_unresolved_findings === true) return 'blocking';
+                if (review.has_unresolved_findings === false) return 'clear';
+                return 'missing';
+              }
+
               // feedback: reviews, comments and reactions from reviewer bots, each with
               // { author, body, at } (ISO time); headAt: when the head commit was pushed.
-              function reviewState({ labels, feedback, headAt }) {
+              function reviewState({ labels, feedback, headAt, headSha }) {
                 if (labels.includes('review:blocking')) return 'blocking';
-                const fresh = feedback.filter((x) => REVIEWER.test(x.author) && /\[bot\]$/.test(x.author) && x.at >= headAt);
-                if (fresh.some((x) => BLOCKING_FINDING.test(x.body || ''))) return 'blocking';
-                if (labels.includes('review:clear') || fresh.length) return 'clear';
-                return 'missing';
+                const bots = feedback.filter((x) => REVIEWER.test(x.author) && /\[bot\]$/.test(x.author));
+                // Codex's summary comment is authoritative for the head commit when present.
+                const summaries = bots.map((x) => codexReview(x.body, headSha)).filter(Boolean);
+                const fresh = bots.filter((x) => x.at >= headAt && !CODEX_STATE.test(x.body || ''));
+                if (summaries.includes('blocking') || fresh.some((x) => BLOCKING_FINDING.test(x.body || ''))) return 'blocking';
+                if (labels.includes('review:clear') || summaries.includes('clear')) return 'clear';
+                if (summaries.length) return 'missing'; // Codex review running, or for an older commit
+                // Other reviewers (e.g. the Claude reviewer): a fresh bot review or 👍 counts.
+                return fresh.length ? 'clear' : 'missing';
               }
 
               function decide(input) {
@@ -130,7 +150,7 @@ jobs:
                 return { risk, reasons, review, approved, state, description };
               }
 
-              module.exports = { classify, classifyFile, isPatchBump, humanApproved, reviewState, decide };
+              module.exports = { classify, classifyFile, isPatchBump, humanApproved, codexReview, reviewState, decide };
 
               return module.exports; })();
             const { owner, repo } = context.repo;
@@ -161,6 +181,7 @@ jobs:
                 ...reactions.filter((r) => r.content === '+1').map((r) => ({ author: r.user?.login || '', body: '', at: r.created_at })),
               ],
               headAt,
+              headSha: pr.head.sha,
             };
             const result = gate.decide(input);
             core.info(JSON.stringify(result, null, 2));
