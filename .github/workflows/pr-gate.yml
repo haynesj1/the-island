@@ -1,19 +1,17 @@
 # GENERATED from portfolio-ops/gate — do not edit here; run `npm run build:gate` in portfolio-ops.
 # Sets the required `review-gate` commit status and the risk:low / risk:normal label.
+#
+# Only triggers that run the DEFAULT-BRANCH copy of this file are used
+# (pull_request_target, issue_comment), so a PR cannot change the gate that
+# judges it. Reviews are detected through comments: Codex edits its summary
+# comment; the Claude reviewer posts a review-verdict comment.
 name: pr-gate
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, converted_to_draft]
-  pull_request_review:
-    types: [submitted, dismissed]
   issue_comment:
-    types: [created, edited]   # Codex edits its summary comment as the review progresses
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: PR number to re-evaluate
-        required: true
+    types: [created, edited]
 
 permissions:
   contents: read
@@ -22,7 +20,10 @@ permissions:
   statuses: write
 
 concurrency:
-  group: pr-gate-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+  # One run per PR at a time; a newer run cancels an older one. Every run
+  # recomputes everything from current GitHub state, so the newest run's
+  # decision is always based on the freshest evidence.
+  group: pr-gate-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      # Never checks out PR code: safe under pull_request_target.
+      # Never checks out PR code.
       - uses: actions/github-script@v7
         with:
           script: |
@@ -39,6 +40,12 @@ jobs:
               // PR gate: classifies risk and decides the `review-gate` commit status.
               // Pure logic only (no network) so it can be unit-tested; the workflow
               // template gathers the data and posts the result.
+              //
+              // Threat model (decision 0003): agents act with the owner's GitHub identity.
+              // They can push, comment, label and post commit statuses as the owner, but
+              // not as the GitHub Actions app, and they must not be able to edit workflows.
+              // So every piece of evidence the gate trusts is either written by a known
+              // reviewer bot and bound to the head SHA, or written by GitHub Actions.
 
               const PROTECTED = [
                 /^\.github\//, /^AGENTS\.md$/, /^CLAUDE\.md$/, /^\.ops\.yml$/, /^\.claude\//,
@@ -49,16 +56,25 @@ jobs:
                 /(^|\/)test_[^/]*\.py$/, /_test\.py$/, /(^|\/)src\/(test|androidTest)\//,
               ];
               const DOC_PATH = [/\.md$/, /^docs\//];
+              const DEPENDENCY_FILES = [
+                /(^|\/)package(-lock)?\.json$/, /(^|\/)pnpm-lock\.yaml$/, /(^|\/)yarn\.lock$/,
+                /(^|\/)uv\.lock$/, /(^|\/)pyproject\.toml$/, /(^|\/)requirements[^/]*\.txt$/,
+                /(^|\/)gradle\/libs\.versions\.toml$/, /(^|\/)build\.gradle(\.kts)?$/,
+              ];
               // A removed line in a test file that looks like a test or an assertion.
               const REMOVED_TEST_LINE = /^-(?!--).*(\b(it|test|describe)\s*\(|def test_|@Test\b|\bexpect\s*\(|\bassert)/m;
               // An added line that disables or narrows tests.
               const ADDED_SKIP_LINE = /^\+(?!\+\+).*(\.(skip|only|todo)\s*\(|\bx(it|describe)\s*\(|@pytest\.mark\.skip|@Ignore\b|@Disabled\b)/m;
-              const REVIEWER = /(codex|chatgpt|openai|claude)/i;
-              const BLOCKING_FINDING = /(badge\/P[01]-|\bP[01]\s*Badge|\[P[01]\]|\bP[01]:)/i;
+              const BLOCKING_FINDING = /(badge\/P[01]-|\bP[01]\s*Badge)/i;
+              // Bot logins whose structured verdicts the gate accepts.
+              const CODEX_BOT = 'chatgpt-codex-connector[bot]';
+              const VERDICT_BOTS = new Set(['claude[bot]', CODEX_BOT]);
+              const ACTIONS_BOT = 'github-actions[bot]';
 
               const isProtected = (f) => PROTECTED.some((r) => r.test(f));
               const isTest = (f) => TEST_PATH.some((r) => r.test(f));
               const isDoc = (f) => DOC_PATH.some((r) => r.test(f));
+              const isDependencyFile = (f) => DEPENDENCY_FILES.some((r) => r.test(f));
 
               function classifyFile(file) {
                 const { filename, status, patch = '' } = file;
@@ -78,14 +94,18 @@ jobs:
                 return !!m && m[1] === m[4] && m[2] === m[5];
               }
 
-              function classify({ author, title, labels, files }) {
+              // commits: authors of every commit on the PR (logins), used so that code
+              // pushed onto a Dependabot branch by anyone else loses the Dependabot path.
+              function classify({ author, title, labels, files, commitAuthors = [] }) {
                 if (files.some((f) => isProtected(f.filename))) {
                   return { risk: 'normal', reasons: files.filter((f) => isProtected(f.filename)).map((f) => `protected path ${f.filename}`) };
                 }
                 if (author === 'dependabot[bot]') {
-                  return isPatchBump(title)
-                    ? { risk: 'low', reasons: ['dependency patch bump'] }
-                    : { risk: 'normal', reasons: ['dependency minor/major bump'] };
+                  const onlyDependabot = commitAuthors.length > 0 && commitAuthors.every((a) => a === 'dependabot[bot]');
+                  const onlyManifests = files.every((f) => isDependencyFile(f.filename));
+                  return isPatchBump(title) && onlyDependabot && onlyManifests
+                    ? { risk: 'low', reasons: ['dependency patch bump (Dependabot commits, manifests only)'] }
+                    : { risk: 'normal', reasons: ['dependency change that is not a pure Dependabot patch bump'] };
                 }
                 if (labels.includes('type:dead-code')) {
                   const onlyDeletes = files.every((f) => f.status !== 'removed' && f.additions === 0);
@@ -98,87 +118,100 @@ jobs:
                 return blockers.length ? { risk: 'normal', reasons: blockers } : { risk: 'low', reasons: [...new Set(results.map((r) => r.why))] };
               }
 
-              // The last `labeled` event for human-approved must be by the owner, done
-              // directly (web UI / gh CLI), not through a GitHub App such as an agent.
-              function labelValid({ labels, labelEvents, owner }) {
-                if (!labels.includes('human-approved')) return false;
-                const last = labelEvents.filter((e) => e.event === 'labeled' && e.label === 'human-approved').at(-1);
-                return !!last && last.actor === owner && !last.viaApp;
-              }
-
-              // Approval is pinned to a commit: when the owner adds the label, the workflow
-              // writes a `human-approval` status on the head SHA. A later push is a new SHA
-              // without that status, so it needs approving again. Only statuses written by
-              // GitHub Actions count (agents acting as the owner can't forge them).
-              // approvedHead: the head SHA carries a github-actions `human-approval` success.
-              function humanApproved(input) {
-                return labelValid(input) && !!input.approvedHead;
-              }
-
-              // Codex keeps one summary comment per PR with a machine-readable state, e.g.
-              // <!-- codex-review-state:v1 {"code_review":{"commit_sha":"…","has_unresolved_findings":false,"status":"running"}} -->
+              // Structured verdicts bound to a commit:
+              //  - Codex: <!-- codex-review-state:v1 {"code_review":{"commit_sha","status","has_unresolved_findings"}} -->
+              //  - Claude reviewer: <!-- review-verdict:v1 {"commit_sha":"…","result":"clear"|"blocking"} -->
               const CODEX_STATE = /<!--\s*codex-review-state:v1\s*(\{[\s\S]*?\})\s*-->/;
-              function codexReview(body, headSha) {
-                const m = CODEX_STATE.exec(body || '');
-                if (!m) return null;
-                let review;
-                try { review = JSON.parse(m[1]).code_review; } catch { return 'missing'; }
-                if (!review) return 'missing';
-                // A summary for another commit says nothing about the head: ignore it, so it
-                // can neither clear the gate nor block a fresh review from another reviewer.
-                if (!headSha || review.commit_sha !== headSha) return null;
-                if (review.has_unresolved_findings === true) return 'blocking';
-                // Only an explicitly successful, finished review can clear the gate; failed,
-                // cancelled, running or unknown states wait.
-                if (/^(completed|succeeded|success)$/i.test(review.status || '') && review.has_unresolved_findings === false) return 'clear';
-                return 'missing';
+              const VERDICT = /<!--\s*review-verdict:v1\s*(\{[\s\S]*?\})\s*-->/;
+              const parse = (re, body) => { const m = re.exec(body || ''); if (!m) return null; try { return JSON.parse(m[1]); } catch { return null; } };
+
+              // Returns 'clear' | 'blocking' | 'pending' | null (no verdict for this head).
+              function verdictFor(item, headSha) {
+                if (!VERDICT_BOTS.has(item.author)) return null;
+                const codex = item.author === CODEX_BOT ? parse(CODEX_STATE, item.body)?.code_review : null;
+                if (codex) {
+                  if (codex.commit_sha !== headSha) return null;
+                  if (codex.has_unresolved_findings === true) return 'blocking';
+                  if (/^(completed|succeeded|success)$/i.test(codex.status || '') && codex.has_unresolved_findings === false) return 'clear';
+                  return 'pending';
+                }
+                const v = parse(VERDICT, item.body);
+                if (!v || v.commit_sha !== headSha) return null;
+                if (v.result === 'blocking') return 'blocking';
+                if (v.result === 'clear') return 'clear';
+                return 'pending';
               }
 
-              // feedback: reviews, comments and reactions from reviewer bots, each with
-              // { author, body, at } (ISO time); headAt: when the head commit was pushed.
-              function reviewState({ labels, feedback, headAt, headSha }) {
+              // feedback: comments and reviews ({ author, body, commitId? }). Review and
+              // line comments carry commitId; a P0/P1 finding from a reviewer bot on the
+              // head commit blocks even if a summary says otherwise.
+              function reviewState({ labels, feedback, headSha }) {
                 if (labels.includes('review:blocking')) return 'blocking';
-                const bots = feedback.filter((x) => REVIEWER.test(x.author) && /\[bot\]$/.test(x.author));
-                // Codex's summary comment is authoritative for the head commit when present.
-                const summaries = bots.map((x) => codexReview(x.body, headSha)).filter(Boolean);
-                const fresh = bots.filter((x) => x.at >= headAt && !CODEX_STATE.test(x.body || ''));
-                if (summaries.includes('blocking') || fresh.some((x) => BLOCKING_FINDING.test(x.body || ''))) return 'blocking';
-                if (labels.includes('review:clear') || summaries.includes('clear')) return 'clear';
-                if (summaries.length) return 'missing'; // Codex review running, or for an older commit
-                // Other reviewers (e.g. the Claude reviewer): a fresh bot review or 👍 counts.
-                return fresh.length ? 'clear' : 'missing';
+                const findings = feedback.filter((x) => VERDICT_BOTS.has(x.author) && x.commitId === headSha && BLOCKING_FINDING.test(x.body || ''));
+                const verdicts = feedback.map((x) => verdictFor(x, headSha)).filter(Boolean);
+                if (findings.length || verdicts.includes('blocking')) return 'blocking';
+                if (verdicts.includes('pending')) return 'missing';
+                return verdicts.includes('clear') ? 'clear' : 'missing';
+              }
+
+              // Approval: the latest `labeled` event for human-approved must be by the
+              // owner, done directly (not via a GitHub App such as an agent), and must be
+              // later than the first time GitHub Actions saw the head commit (the earliest
+              // status Actions wrote on that SHA, a timestamp agents cannot forge). Any
+              // later push is a new SHA first seen after the label, so it needs re-approval.
+              // Returning to an older commit needs a force push, which GitHub records with a
+              // trusted time, so any force push after the head was first seen also voids it.
+              function humanApproved({ labels, labelEvents, owner, headFirstSeen, forcePushTimes = [] }) {
+                if (!labels.includes('human-approved') || !headFirstSeen) return false;
+                if (forcePushTimes.some((t) => t > headFirstSeen)) return false;
+                const last = labelEvents.filter((e) => e.event === 'labeled' && e.label === 'human-approved').at(-1);
+                return !!last && last.actor === owner && !last.viaApp && last.at > headFirstSeen;
               }
 
               function decide(input) {
                 const { risk, reasons } = classify(input);
-                const review = input.author === 'dependabot[bot]' && risk === 'low' ? 'clear' : reviewState(input);
+                const review = reviewState(input);
                 const approved = humanApproved(input);
                 let state; let description;
                 if (input.draft) { state = 'pending'; description = 'Draft PR'; }
-                else if (review === 'blocking') { state = 'failure'; description = 'Reviewer found P0/P1 issues (or review:blocking)'; }
-                else if (review === 'missing') { state = 'pending'; description = 'Waiting for cross-model review'; }
+                else if (review === 'blocking') { state = 'failure'; description = 'Reviewer found P0/P1 issues on this commit (or review:blocking)'; }
+                else if (review === 'missing') { state = 'pending'; description = 'Waiting for a completed review of this commit'; }
                 else if (risk === 'low') { state = 'success'; description = 'risk:low and reviewed'; }
                 else if (approved) { state = 'success'; description = 'human-approved and reviewed'; }
-                else if (labelValid(input)) { state = 'pending'; description = 'risk:normal: approval was for an older commit; remove and re-add human-approved'; }
+                else if (input.labels.includes('human-approved')) { state = 'pending'; description = 'risk:normal: approval predates this commit; remove and re-add human-approved'; }
                 else { state = 'pending'; description = 'risk:normal: waiting for human-approved'; }
                 return { risk, reasons, review, approved, state, description };
               }
 
-              module.exports = { classify, classifyFile, isPatchBump, labelValid, humanApproved, codexReview, reviewState, decide };
+              module.exports = { ACTIONS_BOT, classify, classifyFile, isPatchBump, verdictFor, reviewState, humanApproved, decide };
 
               return module.exports; })();
             const { owner, repo } = context.repo;
-            const number = context.payload.pull_request?.number || context.payload.issue?.number || Number(context.payload.inputs?.pr);
+            const number = context.payload.pull_request?.number || context.payload.issue?.number;
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
             if (pr.state !== 'open') return;
-            const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
-            const timeline = await github.paginate(github.rest.issues.listEventsForTimeline, { owner, repo, issue_number: number, per_page: 100 });
-            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
-            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: number, per_page: 100 });
-            const reviewComments = await github.paginate(github.rest.pulls.listReviewComments, { owner, repo, pull_number: number, per_page: 100 });
-            const reactions = await github.paginate(github.rest.reactions.listForIssue, { owner, repo, issue_number: number, per_page: 100 });
-            const lastPush = timeline.filter((e) => e.event === 'committed' || e.event === 'head_ref_force_pushed').at(-1);
-            const headAt = lastPush?.committer?.date || lastPush?.created_at || pr.created_at;
+            const headSha = pr.head.sha;
+            const list = (fn, args) => github.paginate(fn, { owner, repo, per_page: 100, ...args });
+            const files = await list(github.rest.pulls.listFiles, { pull_number: number });
+            const commits = await list(github.rest.pulls.listCommits, { pull_number: number });
+            const reviews = await list(github.rest.pulls.listReviews, { pull_number: number });
+            const comments = await list(github.rest.issues.listComments, { issue_number: number });
+            const reviewComments = await list(github.rest.pulls.listReviewComments, { pull_number: number });
+            const statuses = await list(github.rest.repos.listCommitStatusesForRef, { ref: headSha });
+            let timeline = await list(github.rest.issues.listEventsForTimeline, { issue_number: number });
+            // The timeline can lag the label webhook by a few seconds.
+            const justLabelled = context.eventName === 'pull_request_target' && context.payload.action === 'labeled';
+            const sinceMs = Date.parse(context.payload.pull_request?.updated_at || 0) - 5000;
+            const seen = () => timeline.some((e) => e.event === 'labeled' && e.label?.name === context.payload.label?.name && Date.parse(e.created_at) >= sinceMs);
+            for (let i = 0; justLabelled && i < 4 && !seen(); i++) {
+              await new Promise((r) => setTimeout(r, 5000));
+              timeline = await list(github.rest.issues.listEventsForTimeline, { issue_number: number });
+            }
+            const labelEvents = timeline.filter((e) => e.event === 'labeled' || e.event === 'unlabeled')
+              .map((e) => ({ event: e.event, label: e.label?.name, actor: e.actor?.login, viaApp: !!e.performed_via_github_app, at: e.created_at }));
+            const forcePushTimes = timeline.filter((e) => e.event === 'head_ref_force_pushed').map((e) => e.created_at);
+            // First time GitHub Actions saw this head: its earliest status on the SHA.
+            const actionsTimes = statuses.filter((s) => s.creator?.login === gate.ACTIONS_BOT).map((s) => s.created_at).sort();
             const input = {
               author: pr.user.login,
               title: pr.title,
@@ -186,51 +219,25 @@ jobs:
               owner: context.repo.owner,
               labels: pr.labels.map((l) => l.name),
               files: files.map((f) => ({ filename: f.filename, status: f.status, patch: f.patch || '', additions: f.additions })),
-              labelEvents: timeline.filter((e) => e.event === 'labeled' || e.event === 'unlabeled')
-                .map((e) => ({ event: e.event, label: e.label?.name, actor: e.actor?.login, viaApp: !!e.performed_via_github_app })),
+              commitAuthors: commits.map((c) => c.author?.login || c.commit?.author?.name || ''),
+              labelEvents,
               feedback: [
-                ...reviews.map((r) => ({ author: r.user?.login || '', body: r.body, at: r.submitted_at })),
-                ...comments.map((c) => ({ author: c.user?.login || '', body: c.body, at: c.created_at })),
-                ...reviewComments.map((c) => ({ author: c.user?.login || '', body: c.body, at: c.created_at })),
-                ...reactions.filter((r) => r.content === '+1').map((r) => ({ author: r.user?.login || '', body: '', at: r.created_at })),
+                ...reviews.map((r) => ({ author: r.user?.login || '', body: r.body, commitId: r.commit_id })),
+                ...reviewComments.map((c) => ({ author: c.user?.login || '', body: c.body, commitId: c.commit_id })),
+                ...comments.map((c) => ({ author: c.user?.login || '', body: c.body })),
               ],
-              headAt,
-              headSha: pr.head.sha,
+              headSha,
+              headFirstSeen: actionsTimes[0],
+              forcePushTimes,
             };
-            // Pin approval to the head SHA (see gate.labelValid / humanApproved).
-            const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
-            const byActions = (s) => s.context === 'human-approval' && s.state === 'success' && s.creator?.login === 'github-actions[bot]';
-            input.approvedHead = statuses.some(byActions);
-            const justLabelled = context.eventName === 'pull_request_target' && context.payload.action === 'labeled'
-              && context.payload.label?.name === 'human-approved';
-            // The timeline can lag the webhook: retry until the labeled event shows up.
-            for (let i = 0; justLabelled && !gate.labelValid(input) && i < 4; i++) {
-              await new Promise((r) => setTimeout(r, 5000));
-              const tl = await github.paginate(github.rest.issues.listEventsForTimeline, { owner, repo, issue_number: number, per_page: 100 });
-              input.labelEvents = tl.filter((e) => e.event === 'labeled' || e.event === 'unlabeled')
-                .map((e) => ({ event: e.event, label: e.label?.name, actor: e.actor?.login, viaApp: !!e.performed_via_github_app }));
-            }
-            // Stamp the commit the owner saw when labelling (from the event), never
-            // the freshly fetched head: a push in between must not inherit approval.
-            const labelledSha = context.payload.pull_request?.head?.sha;
-            if (justLabelled && labelledSha && gate.labelValid(input)) {
-              await github.rest.repos.createCommitStatus({ owner, repo, sha: labelledSha, context: 'human-approval',
-                state: 'success', description: `Approved by ${context.repo.owner}` });
-              if (labelledSha === pr.head.sha) input.approvedHead = true;
-              else core.warning(`Approval was for ${labelledSha}; head is now ${pr.head.sha}: re-approval needed.`);
-            }
             const result = gate.decide(input);
-            core.info(JSON.stringify(result, null, 2));
+            core.info(JSON.stringify({ ...result, headFirstSeen: input.headFirstSeen }, null, 2));
             const want = `risk:${result.risk}`;
             const other = result.risk === 'low' ? 'risk:normal' : 'risk:low';
-            if (!input.labels.includes(want)) {
-              await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [want] });
-            }
-            if (input.labels.includes(other)) {
-              await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: other }).catch(() => {});
-            }
+            if (!input.labels.includes(want)) await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [want] });
+            if (input.labels.includes(other)) await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: other }).catch(() => {});
             await github.rest.repos.createCommitStatus({
-              owner, repo, sha: pr.head.sha, context: 'review-gate',
+              owner, repo, sha: headSha, context: 'review-gate',
               state: result.state, description: result.description.slice(0, 140),
             });
             await core.summary.addHeading(`review-gate: ${result.state}`).addList([
