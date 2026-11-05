@@ -14,6 +14,7 @@ on:
     types: [created, edited]
 
 permissions:
+  actions: read
   contents: read
   pull-requests: write
   issues: write
@@ -155,17 +156,17 @@ jobs:
               }
 
               // Approval: the latest `labeled` event for human-approved must be by the
-              // owner, done directly (not via a GitHub App such as an agent), and must be
-              // later than the first time GitHub Actions saw the head commit (the earliest
-              // status Actions wrote on that SHA, a timestamp agents cannot forge). Any
-              // later push is a new SHA first seen after the label, so it needs re-approval.
-              // Returning to an older commit needs a force push, which GitHub records with a
-              // trusted time, so any force push after the head was first seen also voids it.
-              function humanApproved({ labels, labelEvents, owner, headFirstSeen, forcePushTimes = [] }) {
-                if (!labels.includes('human-approved') || !headFirstSeen) return false;
-                if (forcePushTimes.some((t) => t > headFirstSeen)) return false;
+              // owner, done directly (not via a GitHub App such as an agent), and later than
+              // both (a) when THIS PR adopted its head commit, i.e. the earliest pr-gate run
+              // GitHub recorded for this PR and head SHA (run records can't be forged, and
+              // unlike commit statuses they are tied to the PR), and (b) the latest force
+              // push. Any new push needs a new approval; re-adding the label after a force
+              // push restores it.
+              function humanApproved({ labels, labelEvents, owner, headAdoptedAt, forcePushTimes = [] }) {
+                if (!labels.includes('human-approved') || !headAdoptedAt) return false;
+                const threshold = [headAdoptedAt, ...forcePushTimes].sort().at(-1);
                 const last = labelEvents.filter((e) => e.event === 'labeled' && e.label === 'human-approved').at(-1);
-                return !!last && last.actor === owner && !last.viaApp && last.at > headFirstSeen;
+                return !!last && last.actor === owner && !last.viaApp && last.at > threshold;
               }
 
               function decide(input) {
@@ -197,7 +198,6 @@ jobs:
             const reviews = await list(github.rest.pulls.listReviews, { pull_number: number });
             const comments = await list(github.rest.issues.listComments, { issue_number: number });
             const reviewComments = await list(github.rest.pulls.listReviewComments, { pull_number: number });
-            const statuses = await list(github.rest.repos.listCommitStatusesForRef, { ref: headSha });
             let timeline = await list(github.rest.issues.listEventsForTimeline, { issue_number: number });
             // The timeline can lag the label webhook by a few seconds.
             const justLabelled = context.eventName === 'pull_request_target' && context.payload.action === 'labeled';
@@ -210,8 +210,12 @@ jobs:
             const labelEvents = timeline.filter((e) => e.event === 'labeled' || e.event === 'unlabeled')
               .map((e) => ({ event: e.event, label: e.label?.name, actor: e.actor?.login, viaApp: !!e.performed_via_github_app, at: e.created_at }));
             const forcePushTimes = timeline.filter((e) => e.event === 'head_ref_force_pushed').map((e) => e.created_at);
-            // First time GitHub Actions saw this head: its earliest status on the SHA.
-            const actionsTimes = statuses.filter((s) => s.creator?.login === gate.ACTIONS_BOT).map((s) => s.created_at).sort();
+            // When this PR adopted its head: the earliest pr-gate run GitHub recorded
+            // for this PR and SHA (this run included, so there is always one).
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo,
+              { owner, repo, event: 'pull_request_target', head_sha: headSha, per_page: 100 });
+            const adopted = runs.filter((r) => r.path?.endsWith('pr-gate.yml') && r.pull_requests?.some((p) => p.number === number))
+              .map((r) => r.created_at).sort();
             const input = {
               author: pr.user.login,
               title: pr.title,
@@ -227,11 +231,11 @@ jobs:
                 ...comments.map((c) => ({ author: c.user?.login || '', body: c.body })),
               ],
               headSha,
-              headFirstSeen: actionsTimes[0],
+              headAdoptedAt: adopted[0],
               forcePushTimes,
             };
             const result = gate.decide(input);
-            core.info(JSON.stringify({ ...result, headFirstSeen: input.headFirstSeen }, null, 2));
+            core.info(JSON.stringify({ ...result, headAdoptedAt: input.headAdoptedAt }, null, 2));
             const want = `risk:${result.risk}`;
             const other = result.risk === 'low' ? 'risk:normal' : 'risk:low';
             if (!input.labels.includes(want)) await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [want] });
@@ -239,6 +243,9 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner, repo, sha: headSha, context: 'review-gate',
               state: result.state, description: result.description.slice(0, 140),
+              // Provenance: the daily audit checks each merged PR's final status
+              // links to a pr-gate run (decision 0003).
+              target_url: `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
             });
             await core.summary.addHeading(`review-gate: ${result.state}`).addList([
               `risk: ${result.risk} (${result.reasons.join('; ')})`, `review: ${result.review}`, `human-approved: ${result.approved}`,
