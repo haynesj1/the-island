@@ -210,10 +210,14 @@ jobs:
               input.labelEvents = tl.filter((e) => e.event === 'labeled' || e.event === 'unlabeled')
                 .map((e) => ({ event: e.event, label: e.label?.name, actor: e.actor?.login, viaApp: !!e.performed_via_github_app }));
             }
-            if (justLabelled && !input.approvedHead && gate.labelValid(input)) {
-              await github.rest.repos.createCommitStatus({ owner, repo, sha: pr.head.sha, context: 'human-approval',
+            // Stamp the commit the owner saw when labelling (from the event), never
+            // the freshly fetched head: a push in between must not inherit approval.
+            const labelledSha = context.payload.pull_request?.head?.sha;
+            if (justLabelled && labelledSha && gate.labelValid(input)) {
+              await github.rest.repos.createCommitStatus({ owner, repo, sha: labelledSha, context: 'human-approval',
                 state: 'success', description: `Approved by ${context.repo.owner}` });
-              input.approvedHead = true;
+              if (labelledSha === pr.head.sha) input.approvedHead = true;
+              else core.warning(`Approval was for ${labelledSha}; head is now ${pr.head.sha}: re-approval needed.`);
             }
             const result = gate.decide(input);
             core.info(JSON.stringify(result, null, 2));
