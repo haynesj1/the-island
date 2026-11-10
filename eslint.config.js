@@ -14,5 +14,5 @@ export default [
     files: ['**/*.svelte'],
     languageOptions: { parser: svelteParser, parserOptions: { parser: ts.parser } },
   },
-  { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly' } } },
+  { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly' } } },
 ];
