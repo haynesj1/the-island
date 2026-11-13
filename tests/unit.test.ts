@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { FORBIDDEN_CLAIMS, TAGLINE } from '../src/lib/site';
+import { injectAssets } from '../scripts/precache-assets.mjs';
 import { SHELL_CACHE, SHELL_URLS } from '../src/lib/shell';
 
 describe('copy', () => {
@@ -18,6 +19,20 @@ describe('service worker', () => {
   it('matches the shell constants', () => {
     expect(sw).toContain(`const SHELL_CACHE = '${SHELL_CACHE}'`);
     expect(sw).toContain(`const SHELL_URLS = ${JSON.stringify(SHELL_URLS).replace(/"/g, "'").replace(/,/g, ', ')}`);
+  });
+});
+
+describe('service worker precache of built assets', () => {
+  const sw = readFileSync('public/sw.js', 'utf8');
+  it('injects built assets into the precache list', () => {
+    const out = injectAssets(sw, ['/_astro/a.css', '/_astro/b.js']);
+    expect(out).toContain('const BUILT_ASSETS = ["/_astro/a.css","/_astro/b.js"];');
+  });
+  it('precaches built assets on install', () => {
+    expect(sw).toContain('...BUILT_ASSETS');
+  });
+  it('fails loudly if the placeholder is missing', () => {
+    expect(() => injectAssets('nothing', [])).toThrow();
   });
 });
 

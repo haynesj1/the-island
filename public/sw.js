@@ -2,9 +2,11 @@
 // Keep SHELL_CACHE / SHELL_URLS in step with src/lib/shell.ts (a unit test checks this).
 const SHELL_CACHE = 'island-shell-v1';
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
+// Filled in at build time by scripts/precache-assets.mjs with the hashed CSS/JS files.
+const BUILT_ASSETS = [];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll([...SHELL_URLS, ...BUILT_ASSETS])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
