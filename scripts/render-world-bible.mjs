@@ -10,6 +10,18 @@ export function render(data) {
     '',
     'Every place sessions visit, with fixed sensory details so that returning feels like coming back. Every place passes the Imagery rules in `docs/script-guardrails.md`. "Phases" are the curriculum phases (1 to 4) a place suits; the 100-day map is a separate piece of work and may adjust them.',
     '',
+    '## The island',
+    '',
+    data.island.summary,
+    '',
+    `**Palette:** ${data.island.palette}`,
+    '',
+    '**Rules for every place:**',
+    '',
+    ...data.island.rules.map((r) => `- ${r}`),
+    '',
+    `**Themes:** ${data.island.themes.join(', ')}.`,
+    '',
   ];
   for (const region of data.regions) {
     out.push(`## ${region.name}`, '', region.summary, '');
@@ -27,6 +39,7 @@ export function render(data) {
         `- **Light:** ${p.light}`,
         `- **Way in:** ${p.wayIn}`,
         `- **Way out:** ${p.wayOut}`,
+        `- **Feeling:** ${p.feeling}`,
         `- **Suits phases:** ${p.phases.join(', ')}`,
         '',
       );

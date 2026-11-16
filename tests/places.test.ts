@@ -4,11 +4,12 @@ import { render } from '../scripts/render-world-bible.mjs';
 
 type Place = Record<string, unknown> & { id: string; name: string; region: string; description: string; phases: number[] };
 const data = JSON.parse(readFileSync('content/places.json', 'utf8')) as {
+  island: { summary: string; palette: string; rules: string[]; themes: string[] };
   regions: { id: string; name: string; summary: string }[];
   places: Place[];
 };
 
-const TEXT_FIELDS = ['name', 'description', 'timeOfDay', 'light', 'wayIn', 'wayOut'];
+const TEXT_FIELDS = ['name', 'description', 'timeOfDay', 'light', 'wayIn', 'wayOut', 'feeling'];
 const LIST_FIELDS = ['sights', 'sounds', 'textures', 'smells'];
 
 // Banned imagery from docs/script-guardrails.md § Imagery. Whole words/phrases, case-insensitive.
@@ -27,6 +28,15 @@ function allText(p: Place): string[] {
 }
 
 describe('places.json', () => {
+  it('has island-wide rules and themes with no banned image word', () => {
+    expect(data.island.summary.trim().length).toBeGreaterThan(0);
+    expect(data.island.palette.trim().length).toBeGreaterThan(0);
+    expect(data.island.rules.length).toBeGreaterThan(0);
+    expect(data.island.themes.length).toBeGreaterThan(0);
+    for (const t of [data.island.summary, data.island.palette, ...data.island.rules, ...data.island.themes]) {
+      expect(t, t).not.toMatch(banned);
+    }
+  });
   it('has 15 to 20 places in a few regions', () => {
     expect(data.places.length).toBeGreaterThanOrEqual(15);
     expect(data.places.length).toBeLessThanOrEqual(20);
