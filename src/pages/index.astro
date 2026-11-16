@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import Player from '../components/Player.svelte';
+import { SITE_NAME, TAGLINE } from '../lib/site';
+---
+<Base title={`${SITE_NAME} – guided relaxation`}>
+  <main>
+    <h1>{SITE_NAME}</h1>
+    <p class="tagline">{TAGLINE}</p>
+    <Player client:load />
+  </main>
+</Base>
+<style>
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-weight: 600; margin: 0 0 0.5rem; }
+  .tagline { font-size: 1.125rem; margin: 0; }
+</style>

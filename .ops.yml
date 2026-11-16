@@ -1,4 +1,7 @@
 # Read by portfolio-ops jobs (dispatcher, scans, test review). Changes need human-approved.
 app: the-island
 web: true
-# install, verify, e2e, coverage, dead_code and mutation are filled in by the scaffold issue.
+install: npm ci
+verify: npm run lint && npm run check && npm run test:unit && npm run build
+e2e: npx playwright test --trace off
+# coverage, dead_code and mutation are not set up yet.

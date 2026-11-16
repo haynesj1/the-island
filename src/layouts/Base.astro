@@ -1,0 +1,35 @@
+---
+import { SITE_NAME, TAGLINE } from '../lib/site';
+interface Props { title?: string }
+const { title = SITE_NAME } = Astro.props;
+---
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={TAGLINE} />
+    <meta name="theme-color" content="#2f5d57" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+  </head>
+  <body>
+    <slot />
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
+<style is:global>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.6; background: #f4f8f6; color: #1d2b28; }
+  @media (prefers-color-scheme: dark) { body { background: #14211f; color: #e4efec; } }
+  :focus-visible { outline: 3px solid #2f5d57; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
