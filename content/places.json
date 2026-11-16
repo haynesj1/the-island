@@ -1,0 +1,202 @@
+{
+  "regions": [
+    { "id": "east-shore", "name": "The East Shore", "summary": "A long, sheltered beach facing the morning sun, with shallow, clear water and soft sand." },
+    { "id": "garden-terraces", "name": "The Garden Terraces", "summary": "Gentle, low terraces of herbs, orchards and flowers behind the beach, linked by wide paths." },
+    { "id": "harbour-village", "name": "The Harbour Village", "summary": "A small, sunny harbour with a wooden jetty, open huts and a lamp-lit, level promenade." },
+    { "id": "meadow-hills", "name": "The Meadow Hills", "summary": "Rolling grassland and low, rounded hills with wide views and broad, well-worn tracks." }
+  ],
+  "places": [
+    {
+      "id": "first-light-beach", "name": "First Light Beach", "region": "east-shore",
+      "description": "A broad curve of pale sand where the morning sun first reaches the island. The sea here is calm and shallow, and the tide slips in and out in long, quiet ripples. A wooden walkway leads back up to the garden path whenever you wish to return.",
+      "sights": ["pale sand", "small, clear ripples", "a line of driftwood bleached silver", "the sun rising low over the water"],
+      "sounds": ["unhurried waves folding onto sand", "distant gulls", "the soft hush of foam"],
+      "textures": ["cool, damp sand near the water", "warm, dry sand higher up", "smooth, worn driftwood"],
+      "smells": ["clean salt air", "warm sand"],
+      "timeOfDay": "early morning", "light": "soft golden light with a pale sky",
+      "wayIn": "A wooden walkway from the garden path, with a handrail on one side.",
+      "wayOut": "The same walkway, always in sight, and the open beach stretching both ways.",
+      "phases": [1, 2]
+    },
+    {
+      "id": "shallows-of-glass", "name": "The Glass Shallows", "region": "east-shore",
+      "description": "A wide, clear pool of water that only reaches the ankles on the sand, warmed by the sun. Small, bright shells sit on the bottom and you can see every one. You might paddle, or simply sit on a flat rock at the water's side.",
+      "sights": ["clear, still water", "rippled sand beneath it", "small spiral shells", "a flat, sun-warmed rock"],
+      "sounds": ["soft trickles where the pool meets the sea", "a light breeze"],
+      "textures": ["warm water around the ankles", "fine, rippled sand", "smooth stone"],
+      "smells": ["warm salt", "sun on stone"],
+      "timeOfDay": "mid-morning", "light": "bright, clear daylight",
+      "wayIn": "A short stretch of firm, flat sand from First Light Beach.",
+      "wayOut": "Dry sand begins a few steps away on every side.",
+      "phases": [1, 2, 3]
+    },
+    {
+      "id": "driftwood-bench", "name": "The Driftwood Bench", "region": "east-shore",
+      "description": "A long bench made of silvered driftwood, set on the dry sand at the top of the beach and facing the sea. A tuft of beach grass leans beside it. It is a place for sitting and noticing the day go by.",
+      "sights": ["silvered wood grain", "beach grass moving gently", "a wide, calm horizon"],
+      "sounds": ["waves in the distance", "wind through grass"],
+      "textures": ["smooth, sun-warmed wood", "dry, fine sand underfoot"],
+      "smells": ["salt", "dry grass"],
+      "timeOfDay": "late morning", "light": "bright, even daylight",
+      "wayIn": "A trodden path of flattened grass from the walkway.",
+      "wayOut": "The walkway is a few steps behind the bench, in clear view.",
+      "phases": [1, 2]
+    },
+    {
+      "id": "lantern-cove", "name": "Lantern Cove", "region": "east-shore",
+      "description": "A small, open bay at the south end of the beach, where fishing boats rest on the sand in the afternoon light. Strings of paper lanterns hang along the harbour wall, lit softly even by day. The bay is wide and open to the sea, with the beach in view all the way round.",
+      "sights": ["painted boats resting on sand", "paper lanterns", "a low stone wall", "wide open water"],
+      "sounds": ["rope creaking softly", "water lapping the hulls"],
+      "textures": ["weathered painted wood", "smooth, warm stone"],
+      "smells": ["tar and rope", "sea air"],
+      "timeOfDay": "mid-afternoon", "light": "warm, soft afternoon light",
+      "wayIn": "A sandy path along the water's side from the Driftwood Bench.",
+      "wayOut": "The sandy path, plus steps up to the harbour wall.",
+      "phases": [2, 3]
+    },
+    {
+      "id": "herb-terrace", "name": "The Herb Terrace", "region": "garden-terraces",
+      "description": "A low, sunny terrace of rosemary, thyme and lavender in neat, raised beds. Bees move slowly from flower to flower. A wide stone path runs between the beds, with a wooden seat at one end.",
+      "sights": ["purple lavender", "grey-green rosemary", "slow bees", "a wooden seat"],
+      "sounds": ["quiet humming of bees", "a light breeze in leaves"],
+      "textures": ["soft, springy leaves", "warm flagstones", "rough bark of the seat"],
+      "smells": ["lavender", "rosemary", "warm earth"],
+      "timeOfDay": "late morning", "light": "bright, dappled sunlight",
+      "wayIn": "Three shallow stone steps from the garden path.",
+      "wayOut": "The same steps, and an open gate at the far end.",
+      "phases": [1, 2, 3]
+    },
+    {
+      "id": "orchard-path", "name": "The Orchard Path", "region": "garden-terraces",
+      "description": "A broad, level path under rows of apple and pear trees. Sunlight reaches the grass between the trunks. Ripe fruit sits in a basket at the start of the path, and the way ahead is always clear to see.",
+      "sights": ["rows of fruit trees", "patches of sunlight on grass", "a woven basket", "a clear path ahead"],
+      "sounds": ["leaves moving", "a distant blackbird"],
+      "textures": ["cool, smooth fruit", "short, soft grass", "packed earth underfoot"],
+      "smells": ["ripe apples", "cut grass"],
+      "timeOfDay": "afternoon", "light": "warm light filtering through leaves",
+      "wayIn": "A gate from the Herb Terrace, standing open.",
+      "wayOut": "The gate behind you, and an open lawn at the far end.",
+      "phases": [1, 2, 3]
+    },
+    {
+      "id": "stepping-stone-stream", "name": "The Stepping-Stone Stream", "region": "garden-terraces",
+      "description": "A narrow, clear stream, shallow enough to see every pebble, running over smooth pebbles through the garden. Wide, flat stepping stones cross it, and a mossy bank on either side makes a good place to sit.",
+      "sights": ["clear water over pebbles", "wide flat stones", "green moss", "small dragonflies"],
+      "sounds": ["gentle trickling water", "the odd bird call"],
+      "textures": ["cool, smooth pebbles", "soft moss", "dry, warm stone"],
+      "smells": ["fresh water", "green leaves"],
+      "timeOfDay": "midday", "light": "bright daylight with soft shade",
+      "wayIn": "A grassy track leading from the Orchard Path.",
+      "wayOut": "Either bank leads straight back onto open grass.",
+      "phases": [2, 3]
+    },
+    {
+      "id": "lemon-grove", "name": "The Lemon Grove", "region": "garden-terraces",
+      "description": "A small, airy grove of lemon trees, planted in a loose circle around a stone bench. The trees are low and the sky is always open overhead. Yellow fruit gleams against the leaves.",
+      "sights": ["bright yellow lemons", "glossy leaves", "a stone bench", "open blue sky"],
+      "sounds": ["soft rustling leaves", "faint distant waves"],
+      "textures": ["waxy, cool leaves", "warm stone", "dry, packed earth"],
+      "smells": ["lemon blossom", "citrus peel"],
+      "timeOfDay": "early afternoon", "light": "bright, clear sunlight",
+      "wayIn": "A gap in the circle of trees facing the stream.",
+      "wayOut": "The gap in the trees, and open ground on every side between the trunks.",
+      "phases": [3, 4]
+    },
+    {
+      "id": "sunlit-jetty", "name": "The Sunlit Jetty", "region": "harbour-village",
+      "description": "A broad wooden jetty reaching a short way over calm, shallow water, wide enough for two people to walk side by side. Boards are warm from the sun, and the water below is clear enough to see the sandy bottom. The jetty is short, and the shore is always close behind.",
+      "sights": ["sun-bleached boards", "clear shallow water", "small boats moored nearby", "the village behind"],
+      "sounds": ["boards creaking softly", "water lapping the posts"],
+      "textures": ["warm, smooth boards", "rope handrail"],
+      "smells": ["warm wood", "salt"],
+      "timeOfDay": "late afternoon", "light": "golden light",
+      "wayIn": "A wide ramp from the harbour promenade.",
+      "wayOut": "The ramp and the shore, always in view.",
+      "phases": [1, 2, 3]
+    },
+    {
+      "id": "open-hut", "name": "The Open Hut", "region": "harbour-village",
+      "description": "A small hut with a thatched roof and no walls, so it is open on all four sides. Cushions sit on a wide wooden floor. A breeze moves through, and you can see the sea, the garden and the village from where you sit.",
+      "sights": ["a golden thatched roof", "colourful cushions", "views in every direction", "wide open sky"],
+      "sounds": ["a soft breeze", "distant waves", "a wind chime"],
+      "textures": ["soft woven cushions", "smooth wooden floor"],
+      "smells": ["dried grass", "salt air"],
+      "timeOfDay": "mid-afternoon", "light": "warm, bright and open",
+      "wayIn": "A wide step from the promenade.",
+      "wayOut": "Open on every side, with the promenade a step away.",
+      "phases": [1, 2]
+    },
+    {
+      "id": "lamplit-promenade", "name": "The Lamplit Promenade", "region": "harbour-village",
+      "description": "A wide, level walkway along the harbour, lined with small lamps that glow softly before sunset. Shops are closing and people are heading home in an easy, unhurried way. It stays lit and open the whole length.",
+      "sights": ["small, warm lamps", "a gently curving harbour", "soft pink sky", "painted shutters"],
+      "sounds": ["quiet, distant conversation", "water against the harbour wall"],
+      "textures": ["smooth paving stones", "cool iron railings"],
+      "smells": ["baking bread", "sea air"],
+      "timeOfDay": "early evening", "light": "soft, warm dusk with lamps glowing",
+      "wayIn": "From the Sunlit Jetty, straight along the harbour.",
+      "wayOut": "Side streets open every few steps, and the beach is at the other end.",
+      "phases": [3, 4]
+    },
+    {
+      "id": "bakery-steps", "name": "The Bakery Steps", "region": "harbour-village",
+      "description": "A short, wide flight of whitewashed steps outside the village bakery, warmed by the sun. You might sit on the third step with something warm to eat and watch the harbour. The bakery door is open and the street is just below.",
+      "sights": ["whitewashed steps", "a blue door", "gulls on the roof", "harbour boats"],
+      "sounds": ["soft chatter", "a distant bell", "gulls"],
+      "textures": ["warm, rough plaster", "worn stone steps"],
+      "smells": ["fresh bread", "warm butter"],
+      "timeOfDay": "late morning", "light": "bright, warm daylight",
+      "wayIn": "From the promenade, up four shallow steps.",
+      "wayOut": "The same steps, with the street just below.",
+      "phases": [2, 3]
+    },
+    {
+      "id": "meadow-gate", "name": "The Meadow Gate", "region": "meadow-hills",
+      "description": "A low wooden gate in a stone wall, open onto a wide meadow of long grass and wildflowers. Butterflies move through the sunshine. The meadow is wide and gently sloping, with the village roofs visible behind you.",
+      "sights": ["wildflowers", "long, swaying grass", "butterflies", "village roofs behind"],
+      "sounds": ["soft wind through grass", "crickets", "a skylark"],
+      "textures": ["warm, weathered gate wood", "tall, feathery grass"],
+      "smells": ["sun-warmed grass", "wildflowers"],
+      "timeOfDay": "morning", "light": "clear, bright morning light",
+      "wayIn": "A track from the garden terraces, ending at the gate.",
+      "wayOut": "The open gate and the track behind it.",
+      "phases": [1, 2, 3]
+    },
+    {
+      "id": "hay-meadow-path", "name": "The Hay Meadow Path", "region": "meadow-hills",
+      "description": "A broad, mown path winding gently through the meadow in long, easy curves. Hay is stacked in neat bundles beside the path. It is a place for walking at your own pace, with the whole meadow open on both sides.",
+      "sights": ["a mown green path", "hay bundles", "grasses in seed", "a wide, open sky"],
+      "sounds": ["wind through tall grass", "a lark overhead"],
+      "textures": ["soft, short grass underfoot", "dry, springy hay"],
+      "smells": ["fresh hay", "warm earth"],
+      "timeOfDay": "midday", "light": "bright, open sunlight",
+      "wayIn": "Straight on from the Meadow Gate.",
+      "wayOut": "The meadow is open all round, with the gate in view.",
+      "phases": [2, 3, 4]
+    },
+    {
+      "id": "round-hill-view", "name": "Round Hill", "region": "meadow-hills",
+      "description": "A low, rounded hill with a gentle, grassy slope and a flat, wide top, easy to reach in a few minutes. A single old oak gives shade, and a bench looks out over the island. The top is broad and flat, with grass all the way round.",
+      "sights": ["a broad, flat grassy top", "an old oak", "the whole island laid out below", "a weathered wooden bench"],
+      "sounds": ["wind in oak leaves", "far-off waves"],
+      "textures": ["short, springy grass", "rough oak bark", "smooth bench wood"],
+      "smells": ["oak leaves", "sunny grass"],
+      "timeOfDay": "late afternoon", "light": "golden, low sun",
+      "wayIn": "A wide, well-worn track up the gentle slope.",
+      "wayOut": "The same track, with the village in view the whole way down.",
+      "phases": [3, 4]
+    },
+    {
+      "id": "sunset-meadow", "name": "Sunset Meadow", "region": "meadow-hills",
+      "description": "A quiet corner of the meadow where the grass is soft and short, facing west. The sky turns peach and rose, and the first small lights of the village come on in the distance. A blanket is already laid out on the grass.",
+      "sights": ["peach and rose sky", "short soft grass", "distant village lights", "a folded blanket"],
+      "sounds": ["evening crickets", "a faint breeze"],
+      "textures": ["soft wool blanket", "cool, short grass"],
+      "smells": ["warm grass", "evening air"],
+      "timeOfDay": "sunset", "light": "soft, warm evening light",
+      "wayIn": "A mown path from the Hay Meadow Path.",
+      "wayOut": "The mown path, with the village lights ahead to guide you.",
+      "phases": [4]
+    }
+  ]
+}
