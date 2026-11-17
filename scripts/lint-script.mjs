@@ -46,6 +46,14 @@ const wordRe = (list) => new RegExp(`(?<![\\w'-])(${list.map((w) => esc(w).repla
 const TOKEN = /\[(PAUSE|SILENCE) (\d+) s\]/g;
 const ANY_BRACKET = /\[[^\]]*\]/g;
 
+/** Reduce inline Markdown to the words that are spoken: links keep their text; emphasis, code and strike markers go. */
+function plain(l) {
+  return l
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*`~]+/g, '')
+    .replace(/(?<![\w])_+|_+(?![\w])/g, '');
+}
+
 function parse(text) {
   const lines = text.split(/\r?\n/);
   const meta = {};
@@ -83,7 +91,7 @@ export function lintScript(text) {
     }
     if (spokenText) spokenText += prevBreak ? ' ¶ ' : ' ';
     rows.push({ n: i + 1, from: spokenText.length });
-    spokenText += l.replace(TOKEN, ' ').trim();
+    spokenText += plain(l.replace(TOKEN, ' ')).trim();
     prevBreak = false;
   }
   const lineAt = (offset) => {
@@ -106,6 +114,19 @@ export function lintScript(text) {
     if (f.rule !== 'uk-spelling') continue;
     const w = /"(.+)"/.exec(f.message)[1].toLowerCase();
     f.message += ` (use "${us[w]}")`;
+  }
+
+  // Consecutive pause tokens (only whitespace between) add up to one continuous silence.
+  const maxRun = Number(meta.max_silence_seconds);
+  if (Number.isFinite(maxRun)) {
+    const tail = lines.slice(start).join('\n');
+    for (const run of tail.matchAll(/(?:\[(?:PAUSE|SILENCE) \d+ s\]\s*){2,}/g)) {
+      const total = [...run[0].matchAll(/\[(?:PAUSE|SILENCE) (\d+) s\]/g)].reduce((a, m) => a + Number(m[1]), 0);
+      if (total > maxRun) {
+        const n = start + tail.slice(0, run.index).split('\n').length;
+        add(n, 'silence-max', `consecutive pauses total ${total} s, over this phase's maximum of ${maxRun} s`);
+      }
+    }
   }
 
   // Pause tokens: only [PAUSE n s] / [SILENCE n s]; no silence over the phase maximum.
