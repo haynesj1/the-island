@@ -41,7 +41,7 @@ const us = {
 delete us.imagine;
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const wordRe = (list) => new RegExp(`(?<![\\w'-])(${list.map(esc).join('|')})(?![\\w-])`, 'gi');
+const wordRe = (list) => new RegExp(`(?<![\\w'-])(${list.map((w) => esc(w).replace(/ /g, '\\s+')).join('|')})(?![\\w-])`, 'gi');
 
 const TOKEN = /\[(PAUSE|SILENCE) (\d+) s\]/g;
 const ANY_BRACKET = /\[[^\]]*\]/g;
@@ -69,17 +69,31 @@ export function lintScript(text) {
   const add = (line, rule, message) => out.push({ line, rule, message });
   const { lines, meta, start } = parse(text);
 
-  // Spoken lines: everything after front matter, excluding headings and blank lines.
-  const spoken = [];
+  // Spoken text: everything after front matter, excluding headings and blank lines. Lines of one paragraph
+  // are joined with a single space, so phrases that cross a Markdown soft line break still match. Paragraphs are
+  // separated by a "¶" marker so that nothing matches across them. `rows` maps character offsets back to source lines.
+  const rows = [];
+  let spokenText = '';
+  let prevBreak = true;
   for (let i = start; i < lines.length; i++) {
     const l = lines[i];
-    if (!l.trim() || /^#{1,6}\s/.test(l)) continue;
-    spoken.push({ n: i + 1, text: l.replace(TOKEN, ' ') });
+    if (!l.trim() || /^#{1,6}\s/.test(l)) {
+      prevBreak = true;
+      continue;
+    }
+    if (spokenText) spokenText += prevBreak ? ' ¶ ' : ' ';
+    rows.push({ n: i + 1, from: spokenText.length });
+    spokenText += l.replace(TOKEN, ' ').trim();
+    prevBreak = false;
   }
+  const lineAt = (offset) => {
+    let n = rows[0]?.n ?? 1;
+    for (const r of rows) if (r.from <= offset) n = r.n;
+    return n;
+  };
 
   const scan = (list, rule, label) => {
-    const re = wordRe(list);
-    for (const s of spoken) for (const m of s.text.matchAll(re)) add(s.n, rule, `${label}: "${m[0]}"`);
+    for (const m of spokenText.matchAll(wordRe(list))) add(lineAt(m.index), rule, `${label}: "${m[0].replace(/\s+/g, ' ')}"`);
   };
   scan(imagery, 'imagery', 'banned imagery');
   scan(body, 'body-and-breath', 'banned body or breath focus');
@@ -110,39 +124,61 @@ export function lintScript(text) {
   }
 
   // Word budget.
+  const wordMatches = [...spokenText.matchAll(/[\p{L}\p{N}'’-]+/gu)];
   const minutes = Number(meta.speech_minutes);
   if (!Number.isFinite(minutes) || minutes <= 0) {
     add(1, 'budget', 'front matter needs speech_minutes (a number) from the curriculum entry');
   } else {
     if (!Number.isFinite(maxSilence)) add(1, 'silence-max', 'front matter needs max_silence_seconds (a number) from the curriculum entry');
-    const words = spoken.reduce((n, s) => n + (s.text.match(/[\p{L}\p{N}'’-]+/gu)?.length ?? 0), 0);
+    const words = wordMatches.length;
     const budget = minutes * WORDS_PER_MINUTE;
     if (words > budget * (1 + BUDGET_TOLERANCE) || words < budget * (1 - BUDGET_TOLERANCE)) {
       add(1, 'budget', `${words} words; budget is ${budget} (${minutes} min x ${WORDS_PER_MINUTE}) give or take ${BUDGET_TOLERANCE * 100}%`);
     }
   }
 
-  // Structure. Positions are by share of spoken text.
-  const total = spoken.length;
-  const at = (a, b) => spoken.filter((_, i) => i >= Math.floor(total * a) && i < Math.ceil(total * b));
-  const find = (rows, re) => rows.find((r) => re.test(r.text));
-  const need = (rows, re, rule, msg) => { if (!find(rows, re)) add(rows[0]?.n ?? 1, rule, msg); };
+  // Structure. Positions are by share of spoken words, not source lines.
+  const total = wordMatches.length;
+  const window = (a, b) => {
+    const first = wordMatches[Math.floor(total * a)];
+    const last = wordMatches[Math.max(Math.ceil(total * b) - 1, Math.floor(total * a))];
+    const from = first.index;
+    return { from, to: last.index + last[0].length, text: spokenText.slice(from, last.index + last[0].length) };
+  };
+  const need = (win, re, rule, msg) => { if (!re.test(win.text)) add(lineAt(win.from), rule, msg); };
   if (total === 0) {
     add(1, 'structure', 'script has no spoken text');
   } else {
-    const opening = at(0, 0.25);
-    const closing = at(0.75, 1);
+    const opening = window(0, 0.25);
+    const closing = window(0.75, 1);
     const stop = /(stop|pause|open your eyes|open them|step away)/i;
     need(opening, /(eyes (open|closed)|open or closed|closed or open)/i, 'structure-opening-choice', 'opening must offer a choice of eyes open or closed');
     need(opening, /(anchor|rest your attention|rest your gaze|settle your attention)/i, 'structure-opening-choice', 'opening must offer an anchor for attention');
     need(opening, stop, 'structure-permission-start', 'opening must give permission to pause, open the eyes or stop');
-    need(at(0.4, 0.6), stop, 'structure-permission-midway', 'midway must again give permission to pause, open the eyes or stop');
+    need(window(0.35, 0.65), stop, 'structure-permission-midway', 'midway must again give permission to pause, open the eyes or stop');
     need(closing, /(feet|seat|chair|ground)/i, 'structure-closing-grounding', 'closing must ground through feet or seat');
     need(closing, /(sound|hear)/i, 'structure-closing-grounding', 'closing must invite noticing three sounds in the room');
     need(closing, /fingers/i, 'structure-closing-grounding', 'closing must mention fingers and toes');
     need(closing, /(open your eyes|eyes open).*(own time|when you(.re| are) ready)|(own time|when you(.re| are) ready).*(open your eyes|eyes open)/i, 'structure-closing-grounding', 'closing must invite opening the eyes in your own time');
-    need(spoken, /(not while driving|while driving|if you are driving|behind the wheel)/i, 'structure-driving-notice', 'a "not while driving" notice is required');
-    if (!find(at(0, 0.2), /driving/i) && find(spoken, /driving/i)) add(find(spoken, /driving/i).n, 'structure-driving-notice', 'the "not while driving" notice must come at the start');
+
+    // Driving notice: a sentence that mentions driving AND prohibits it, within the first 20% of the script.
+    const mentions = /(driving|behind the wheel)/i;
+    const prohibits = /(\b(not|never|avoid|shouldn't|mustn't)\b|n't\b|\bdo not\b)/i;
+    let offset = 0;
+    let driving = null;
+    let mentioned = null;
+    for (const sentence of spokenText.split(/(?<=[.!?¶])/)) {
+      if (mentions.test(sentence)) {
+        mentioned ??= offset;
+        if (prohibits.test(sentence)) driving ??= offset;
+      }
+      offset += sentence.length;
+    }
+    if (driving === null) {
+      add(lineAt(mentioned ?? 0), 'structure-driving-notice', 'a "not while driving" notice that actually says not to listen while driving is required');
+    } else if (driving > window(0, 0.2).to) {
+      add(lineAt(driving), 'structure-driving-notice', 'the "not while driving" notice must come at the start');
+    }
   }
 
   return out.sort((a, b) => a.line - b.line || a.rule.localeCompare(b.rule));

@@ -27,6 +27,9 @@ describe('lint-script', () => {
     ['fail-no-permission-midway.md', 'structure-permission-midway'],
     ['fail-no-grounding.md', 'structure-closing-grounding'],
     ['fail-no-driving.md', 'structure-driving-notice'],
+    ['fail-driving-affirmative.md', 'structure-driving-notice'],
+    ['fail-softbreak-phrase.md', 'body-and-breath'],
+    ['fail-oneline-midway.md', 'structure-permission-midway'],
   ];
 
   it.each(failing)('%s fails rule %s', (file, rule, line) => {
