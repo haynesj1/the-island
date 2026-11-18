@@ -36,6 +36,7 @@ describe('lint-script', () => {
     ['fail-unclosed-token.md', 'tokens', 19],
     ['fail-bare-directive.md', 'tokens', 19],
     ['fail-hyphen-imagery.md', 'imagery', 19],
+    ['fail-curly-apostrophe.md', 'imagery', 19],
   ];
 
   it.each(failing)('%s fails rule %s', (file, rule, line) => {

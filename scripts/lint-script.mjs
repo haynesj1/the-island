@@ -92,7 +92,8 @@ export function lintScript(text) {
     }
     if (spokenText) spokenText += prevBreak ? ' ¶ ' : ' ';
     rows.push({ n: i + 1, from: spokenText.length });
-    spokenText += plain(l.replace(TOKEN, ' ')).trim();
+    // Typographic apostrophes become straight ones, so "can’t move" matches "can't move".
+    spokenText += plain(l.replace(TOKEN, ' ')).replace(/[‘’ʼ]/g, "'").trim();
     prevBreak = false;
   }
   const lineAt = (offset) => {
