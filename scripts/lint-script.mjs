@@ -41,7 +41,8 @@ const us = {
 delete us.imagine;
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const wordRe = (list) => new RegExp(`(?<![\\w'-])(${list.map((w) => esc(w).replace(/ /g, '\\s+')).join('|')})(?![\\w-])`, 'gi');
+// Hyphens separate words, so "cliff-edge" or "deep-water" match like "cliff edge" or "deep water".
+const wordRe = (list) => new RegExp(`(?<![\\w'])(${list.map((w) => esc(w).replace(/[ -]/g, '[\\s-]+')).join('|')})(?!\\w)`, 'gi');
 
 const TOKEN = /\[(PAUSE|SILENCE) (\d+) s\]/g;
 const ANY_BRACKET = /\[[^\]]*\]/g;
