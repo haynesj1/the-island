@@ -32,6 +32,9 @@ describe('lint-script', () => {
     ['fail-oneline-midway.md', 'structure-permission-midway'],
     ['fail-emphasis-phrase.md', 'body-and-breath'],
     ['fail-silence-run.md', 'silence-max'],
+    ['fail-substring-permission.md', 'structure-permission-midway'],
+    ['fail-unclosed-token.md', 'tokens', 19],
+    ['fail-bare-directive.md', 'tokens', 19],
   ];
 
   it.each(failing)('%s fails rule %s', (file, rule, line) => {

@@ -139,6 +139,12 @@ export function lintScript(text) {
         add(i + 1, 'silence-max', `${m[1]} ${m[2]} s is over this phase's maximum of ${maxSilence} s`);
       }
     }
+    // A bracket without its partner, or a PAUSE/SILENCE directive outside a complete token, is a malformed token.
+    if (i >= start) {
+      const rest = lines[i].replace(ANY_BRACKET, ' ');
+      if (/[[\]]/.test(rest)) add(i + 1, 'tokens', 'unmatched bracket: tokens must be written [PAUSE n s] or [SILENCE n s]');
+      else if (/\b(PAUSE|SILENCE)\b/.test(rest)) add(i + 1, 'tokens', 'PAUSE/SILENCE must be written as a complete [PAUSE n s] or [SILENCE n s] token');
+    }
     // Ellipsis or voice tags as silence are not allowed.
     if (i >= start && /(\.{3}|…)/.test(lines[i])) add(i + 1, 'tokens', 'silence must use [PAUSE n s] / [SILENCE n s], not ellipses');
     if (i >= start && /<[^>]+>/.test(lines[i])) add(i + 1, 'tokens', 'no voice or SSML tags; silences are added at assembly');
@@ -158,7 +164,8 @@ export function lintScript(text) {
     }
   }
 
-  // Structure. Positions are by share of spoken words, not source lines.
+  // Structure. Positions are by share of spoken words, not source lines. Keywords match as whole words,
+  // so "nonstop" or "background" cannot stand in for "stop" or "ground".
   const total = wordMatches.length;
   const window = (a, b) => {
     const first = wordMatches[Math.floor(total * a)];
@@ -172,18 +179,18 @@ export function lintScript(text) {
   } else {
     const opening = window(0, 0.25);
     const closing = window(0.75, 1);
-    const stop = /(stop|pause|open your eyes|open them|step away)/i;
-    need(opening, /(eyes (open|closed)|open or closed|closed or open)/i, 'structure-opening-choice', 'opening must offer a choice of eyes open or closed');
-    need(opening, /(anchor|rest your attention|rest your gaze|settle your attention)/i, 'structure-opening-choice', 'opening must offer an anchor for attention');
+    const stop = /\b(stop|pause|open your eyes|open them|step away)\b/i;
+    need(opening, /\b(eyes (open|closed)|open or closed|closed or open)\b/i, 'structure-opening-choice', 'opening must offer a choice of eyes open or closed');
+    need(opening, /\b(anchor|rest your attention|rest your gaze|settle your attention)\b/i, 'structure-opening-choice', 'opening must offer an anchor for attention');
     need(opening, stop, 'structure-permission-start', 'opening must give permission to pause, open the eyes or stop');
     need(window(0.35, 0.65), stop, 'structure-permission-midway', 'midway must again give permission to pause, open the eyes or stop');
-    need(closing, /(feet|seat|chair|ground)/i, 'structure-closing-grounding', 'closing must ground through feet or seat');
-    need(closing, /(sound|hear)/i, 'structure-closing-grounding', 'closing must invite noticing three sounds in the room');
-    need(closing, /fingers/i, 'structure-closing-grounding', 'closing must mention fingers and toes');
-    need(closing, /(open your eyes|eyes open).*(own time|when you(.re| are) ready)|(own time|when you(.re| are) ready).*(open your eyes|eyes open)/i, 'structure-closing-grounding', 'closing must invite opening the eyes in your own time');
+    need(closing, /\b(feet|seat|chair|ground)\b/i, 'structure-closing-grounding', 'closing must ground through feet or seat');
+    need(closing, /\b(sounds?|hear)\b/i, 'structure-closing-grounding', 'closing must invite noticing three sounds in the room');
+    need(closing, /\bfingers\b/i, 'structure-closing-grounding', 'closing must mention fingers and toes');
+    need(closing, /\b(open your eyes|eyes open)\b.*\b(own time|when you(.re| are) ready)\b|\b(own time|when you(.re| are) ready)\b.*\b(open your eyes|eyes open)\b/i, 'structure-closing-grounding', 'closing must invite opening the eyes in your own time');
 
     // Driving notice: a sentence that mentions driving AND prohibits it, within the first 20% of the script.
-    const mentions = /(driving|behind the wheel)/i;
+    const mentions = /\b(driving|behind the wheel)\b/i;
     const prohibits = /(\b(not|never|avoid|shouldn't|mustn't)\b|n't\b|\bdo not\b)/i;
     let offset = 0;
     let driving = null;
