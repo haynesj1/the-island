@@ -22,7 +22,7 @@ A mobile-friendly web app of story-based guided relaxation sessions set in place
 
 **Before opening the PR**: run the verify command from `.ops.yml` and paste its result in the PR description. For UI changes, attach screenshots at 375px and 1280px wide. Then enable auto-merge: `gh pr merge --auto --squash`. The `review-gate` check decides whether it may merge.
 
-**Decisions.** If you make a decision that isn't visible in the code, add `docs/decisions/NNNN-title.md` in the same PR (date, context, choice, alternatives). Supersede old decisions; never delete them.
+**Decisions.** If you make a decision that isn't visible in the code, explain it in the PR description under a line `Decisions:` (context, choice, alternatives, in a few lines). Add `docs/decisions/NNNN-title.md` only when the issue asks for a decision record. Supersede old decisions; never delete them.
 
 ## Review guidelines
 
