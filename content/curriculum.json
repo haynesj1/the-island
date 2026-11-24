@@ -1,0 +1,245 @@
+{
+  "startDate": "2026-11-16",
+  "totalDays": 100,
+  "wordsPerSpeechMinute": 105,
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Arrival",
+      "days": [
+        1,
+        42
+      ],
+      "practises": "Settling in: choosing eyes open or closed, one anchor, and getting to know the island's gentlest places by daylight.",
+      "lengthMinutes": [
+        8,
+        12
+      ],
+      "maxSilenceSeconds": 10
+    },
+    {
+      "phase": 2,
+      "name": "Wandering",
+      "days": [
+        43,
+        70
+      ],
+      "practises": "Moving slowly along the island's paths, with more room to notice sounds, textures and light.",
+      "lengthMinutes": [
+        10,
+        14
+      ],
+      "maxSilenceSeconds": 20
+    },
+    {
+      "phase": 3,
+      "name": "Belonging",
+      "days": [
+        71,
+        91
+      ],
+      "practises": "Sharing the island with its people and its high, open places, with longer pauses to simply be there.",
+      "lengthMinutes": [
+        12,
+        16
+      ],
+      "maxSilenceSeconds": 30
+    },
+    {
+      "phase": 4,
+      "name": "Perspective",
+      "days": [
+        92,
+        100
+      ],
+      "practises": "Looking back over the whole island from its quietest places, with the longest pauses.",
+      "lengthMinutes": [
+        14,
+        18
+      ],
+      "maxSilenceSeconds": 40
+    }
+  ],
+  "sessions": [
+    {
+      "id": "s01",
+      "day": 1,
+      "phase": 1,
+      "place": "the-cove",
+      "theme": "Arrive at the cove at sunset and meet the island.",
+      "lengthMinutes": 8,
+      "speechMinutes": 7,
+      "wordBudget": 735,
+      "maxSilenceSeconds": 8,
+      "detail": "full"
+    },
+    {
+      "id": "s02",
+      "day": 8,
+      "phase": 1,
+      "place": "cove-in-the-morning",
+      "theme": "The same cove at first light, nothing asked of the day.",
+      "lengthMinutes": 8,
+      "speechMinutes": 7,
+      "wordBudget": 735,
+      "maxSilenceSeconds": 8,
+      "detail": "full"
+    },
+    {
+      "id": "s03",
+      "day": 15,
+      "phase": 1,
+      "place": "pine-shade",
+      "theme": "Sit in the cool shade of the old umbrella pine.",
+      "lengthMinutes": 9,
+      "speechMinutes": 8,
+      "wordBudget": 840,
+      "maxSilenceSeconds": 8,
+      "detail": "full"
+    },
+    {
+      "id": "s04",
+      "day": 22,
+      "phase": 1,
+      "place": "warm-rocks",
+      "theme": "Rest on sun-warmed rocks beside the water.",
+      "lengthMinutes": 10,
+      "speechMinutes": 9,
+      "wordBudget": 945,
+      "maxSilenceSeconds": 10,
+      "detail": "full"
+    },
+    {
+      "id": "s05",
+      "day": 29,
+      "phase": 1,
+      "place": "path-from-the-cove",
+      "theme": "Start up the old path through pines and herbs.",
+      "lengthMinutes": 11,
+      "speechMinutes": 10,
+      "wordBudget": 1050,
+      "maxSilenceSeconds": 10,
+      "detail": "full"
+    },
+    {
+      "id": "s06",
+      "day": 36,
+      "phase": 1,
+      "place": "olive-terraces",
+      "theme": "Pause among the silvery olive terraces.",
+      "lengthMinutes": 12,
+      "speechMinutes": 11,
+      "wordBudget": 1155,
+      "maxSilenceSeconds": 10,
+      "detail": "full"
+    },
+    {
+      "id": "s07",
+      "day": 43,
+      "phase": 2,
+      "place": "the-cove",
+      "theme": "Return to the cove, now a familiar place.",
+      "lengthMinutes": 10,
+      "speechMinutes": 9,
+      "wordBudget": 945,
+      "maxSilenceSeconds": 15,
+      "detail": "outline"
+    },
+    {
+      "id": "s08",
+      "day": 50,
+      "phase": 2,
+      "place": "fig-lane",
+      "theme": "Walk the shaded lane lined with fig trees.",
+      "lengthMinutes": 11,
+      "speechMinutes": 10,
+      "wordBudget": 1050,
+      "maxSilenceSeconds": 15,
+      "detail": "outline"
+    },
+    {
+      "id": "s09",
+      "day": 57,
+      "phase": 2,
+      "place": "the-harbour",
+      "theme": "Arrive at the small harbour and watch the boats.",
+      "lengthMinutes": 12,
+      "speechMinutes": 11,
+      "wordBudget": 1155,
+      "maxSilenceSeconds": 20,
+      "detail": "outline"
+    },
+    {
+      "id": "s10",
+      "day": 64,
+      "phase": 2,
+      "place": "shepherds-track",
+      "theme": "Follow the shepherds' track gently uphill.",
+      "lengthMinutes": 14,
+      "speechMinutes": 13,
+      "wordBudget": 1365,
+      "maxSilenceSeconds": 20,
+      "detail": "outline"
+    },
+    {
+      "id": "s11",
+      "day": 71,
+      "phase": 3,
+      "place": "whitewashed-lanes",
+      "theme": "Wander the whitewashed lanes of the village.",
+      "lengthMinutes": 12,
+      "speechMinutes": 11,
+      "wordBudget": 1155,
+      "maxSilenceSeconds": 25,
+      "detail": "outline"
+    },
+    {
+      "id": "s12",
+      "day": 78,
+      "phase": 3,
+      "place": "harbour-taverna",
+      "theme": "Sit with the village at the harbour taverna.",
+      "lengthMinutes": 14,
+      "speechMinutes": 13,
+      "wordBudget": 1365,
+      "maxSilenceSeconds": 25,
+      "detail": "outline"
+    },
+    {
+      "id": "s13",
+      "day": 85,
+      "phase": 3,
+      "place": "threshing-floor",
+      "theme": "Rest on the old threshing floor in the open air.",
+      "lengthMinutes": 16,
+      "speechMinutes": 15,
+      "wordBudget": 1575,
+      "maxSilenceSeconds": 30,
+      "detail": "outline"
+    },
+    {
+      "id": "s14",
+      "day": 92,
+      "phase": 4,
+      "place": "the-high-plateau",
+      "theme": "Take in the island from the high plateau.",
+      "lengthMinutes": 16,
+      "speechMinutes": 15,
+      "wordBudget": 1575,
+      "maxSilenceSeconds": 35,
+      "detail": "outline"
+    },
+    {
+      "id": "s15",
+      "day": 99,
+      "phase": 4,
+      "place": "the-cove",
+      "theme": "Come home to the cove at sunset.",
+      "lengthMinutes": 18,
+      "speechMinutes": 17,
+      "wordBudget": 1785,
+      "maxSilenceSeconds": 40,
+      "detail": "outline"
+    }
+  ]
+}
