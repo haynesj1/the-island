@@ -34,7 +34,10 @@
   }
 
   function again() {
-    if (audio) audio.currentTime = 0;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.load(); // clears a failed source so the next play re-requests it
+    }
     send({ type: 'restart' });
   }
 </script>

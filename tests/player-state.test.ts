@@ -26,6 +26,10 @@ describe('player state', () => {
     expect(s.phase).toBe('ended');
     expect(reduce(s, { type: 'restart' })).toEqual(initialState);
   });
+  it('returns to playing when audio restarts after ending (e.g. Media Session play)', () => {
+    const s = run([{ type: 'choose-eyes', eyes: 'open' }, { type: 'playing' }, { type: 'ended' }, { type: 'playing' }]);
+    expect(s).toEqual({ phase: 'playing', eyes: 'open' });
+  });
   it('shows an error after a failure but not before anything started', () => {
     expect(reduce(initialState, { type: 'error' })).toEqual(initialState);
     expect(run([{ type: 'choose-eyes', eyes: 'open' }, { type: 'error' }]).phase).toBe('error');

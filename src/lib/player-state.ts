@@ -23,7 +23,8 @@ export function reduce(state: PlayerState, event: PlayerEvent): PlayerState {
     case 'choose-eyes':
       return state.phase === 'choose' ? { phase: 'loading', eyes: event.eyes } : state;
     case 'playing':
-      return state.phase === 'loading' || state.phase === 'paused' ? { ...state, phase: 'playing' } : state;
+      return state.phase === 'loading' || state.phase === 'paused' || state.phase === 'ended'
+        ? { ...state, phase: 'playing' } : state;
     case 'pause':
       return state.phase === 'playing' ? { ...state, phase: 'paused' } : state;
     case 'resume':
