@@ -12,7 +12,11 @@ export default [
   ...svelte.configs.recommended,
   {
     files: ['**/*.svelte'],
-    languageOptions: { parser: svelteParser, parserOptions: { parser: ts.parser } },
+    languageOptions: {
+      parser: svelteParser,
+      parserOptions: { parser: ts.parser },
+      globals: { navigator: 'readonly', MediaMetadata: 'readonly', HTMLAudioElement: 'readonly' },
+    },
   },
   { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly' } } },
 ];

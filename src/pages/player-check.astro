@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import Player from '../components/Player.svelte';
+---
+<Base title="Player check">
+  <meta name="robots" content="noindex" slot="head" />
+  <main>
+    <h1>Player check</h1>
+    <p>A test page for the audio player, using a fixture audio file. Not part of the programme.</p>
+    <Player client:load src="/fixture-silence.wav" title="Fixture session" />
+  </main>
+</Base>
+<style>
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+</style>
