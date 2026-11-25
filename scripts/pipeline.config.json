@@ -1,0 +1,10 @@
+{
+  "weeklyCapUsd": 5,
+  "stageShare": { "outline": 0.1, "draft": 0.4, "critic": 0.15, "revise": 0.35 },
+  "maxRevisions": 3,
+  "recentScripts": 3,
+  "similarityLimit": 0.2,
+  "maxOutputTokens": { "outline": 1000, "draft": 4000, "critic": 800, "revise": 4000 },
+  "pricing": { "inputPerMTokUsd": 3, "outputPerMTokUsd": 15 },
+  "model": "claude-sonnet-5-5"
+}

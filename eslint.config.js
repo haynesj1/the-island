@@ -18,5 +18,5 @@ export default [
       globals: { navigator: 'readonly', MediaMetadata: 'readonly', HTMLAudioElement: 'readonly' },
     },
   },
-  { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly' } } },
+  { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly', fetch: 'readonly' } } },
 ];
