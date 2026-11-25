@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { CostCapError, criticChecks, generate, nextSession, similarity } from '../scripts/generate-script.mjs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { CostCapError, criticChecks, generate, main, nextSession, similarity, worldContext } from '../scripts/generate-script.mjs';
 import { lintScript } from '../scripts/lint-script.mjs';
 
 const config = JSON.parse(readFileSync('scripts/pipeline.config.json', 'utf8'));
@@ -83,5 +85,30 @@ describe('nextSession', () => {
   it('returns the first session without a script', () => {
     const cur = { sessions: [{ day: 1 }, { day: 8 }] };
     expect(nextSession(cur, 'tests/fixtures/none')).toEqual({ day: 1 });
+  });
+});
+
+describe('world context', () => {
+  it('reaches the critic with sensory fields and island rules', async () => {
+    const rich = { name: 'Pine Shade', description: 'Shade.', timeOfDay: 'early afternoon', sights: ['dappled pines'] };
+    const p = fake({ outline: ['o'], draft: [good], critic: ['OK'], revise: [good] });
+    await generate({ session, place: rich, island: { summary: 'S', rules: ['No palms'] }, provider: p, config });
+    const critic = p.calls.find((c) => c.stage === 'critic')!.prompt;
+    expect(critic).toMatch(/early afternoon/);
+    expect(critic).toMatch(/dappled pines/);
+    expect(critic).toMatch(/No palms/);
+    expect(worldContext(rich, { summary: 'S' })).toMatch(/Time of day \(fixed\): early afternoon/);
+  });
+});
+
+describe('main', () => {
+  it('refuses to overwrite an existing script and makes no model calls', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'sessions-'));
+    mkdirSync(join(root, '001'));
+    writeFileSync(join(root, '001', 'script.md'), 'human edits');
+    const p = fake({ outline: ['o'], draft: [good], critic: ['OK'], revise: [good] });
+    expect(await main(['--day', '1'], p, root)).toBe(1);
+    expect(p.calls).toHaveLength(0);
+    expect(readFileSync(join(root, '001', 'script.md'), 'utf8')).toBe('human edits');
   });
 });

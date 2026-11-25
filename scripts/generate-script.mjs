@@ -21,6 +21,15 @@ export function nextSession(curriculum, root = 'content/sessions') {
   return curriculum.sessions.find((s) => !existsSync(join(root, dayDir(s.day), 'script.md')));
 }
 
+/** Full world-bible constraints for a place plus the island-wide rules (fixed sensory continuity). */
+export function worldContext(place, island) {
+  const list = (label, v) => (v?.length ? `${label}: ${[].concat(v).join('; ')}\n` : '');
+  return `Place: ${place.name}. ${place.description}\n` +
+    list('Sights', place.sights) + list('Sounds', place.sounds) + list('Textures', place.textures) + list('Smells', place.smells) +
+    list('Time of day (fixed)', place.timeOfDay) + list('Light', place.light) + list('Feeling', place.feeling) +
+    `Island: ${island.summary}\n` + list('Island rules', island.rules);
+}
+
 /** Share of the candidate's 5-word runs that also appear in `other` (0 to 1). */
 export function similarity(a, b) {
   const grams = (t) => {
@@ -85,7 +94,7 @@ export async function generate({ session, place, island, recent = [], provider, 
     budget.record(stage, r);
     return r.text;
   };
-  const brief = `Session ${session.id}, day ${session.day}. Theme: ${session.theme}\nPlace: ${place.name}. ${place.description}\nIsland: ${island.summary}\n` +
+  const brief = `Session ${session.id}, day ${session.day}. Theme: ${session.theme}\n${worldContext(place, island)}` +
     `Speech length: ${session.speechMinutes} minutes, about ${session.wordBudget} words (stay within 10%). Longest silence: ${session.maxSilenceSeconds} s.`;
   const rules = 'You write guided relaxation scripts. Second person, present tense, UK spelling, invitational wording. Pauses only as [PAUSE n s] or [SILENCE n s]. ' +
     'Never claim to treat or cure anything. Follow docs/script-guardrails.md: opening choice of eyes open or closed and an anchor, permission to stop at the start and midway, gradual return, grounding, a not-while-driving notice. ' +
@@ -103,7 +112,7 @@ export async function generate({ session, place, island, recent = [], provider, 
     ];
     // Model critic: continuity with the world bible. Reply "OK" or one issue per line.
     const verdict = (await call('critic', 'You check continuity only. Reply exactly OK, or list one problem per line.',
-      `Place description (fixed sensory details):\n${place.description}\n\nScript:\n${body}`)).trim();
+      `World bible for this place (fixed details; the script must not contradict them, including time of day and light):\n${worldContext(place, island)}\nScript:\n${body}`)).trim();
     if (verdict !== 'OK') issues.push(...verdict.split('\n').map((l) => `continuity: ${l.replace(/^[-*\s]+/, '')}`).filter((l) => l.length > 12));
     if (!issues.length) return { text, revisions, spentUsd: budget.total() };
     if (revisions >= config.maxRevisions) throw new Error(`still failing after ${revisions} revisions:\n${issues.join('\n')}`);
@@ -137,14 +146,15 @@ function recentScripts(curriculum, session, root, n) {
     .map((s) => ({ day: s.day, text: readFileSync(join(root, dayDir(s.day), 'script.md'), 'utf8') }));
 }
 
-export async function main(argv, provider) {
+export async function main(argv, provider, root = 'content/sessions') {
   const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
   const config = JSON.parse(readFileSync(new URL('./pipeline.config.json', import.meta.url), 'utf8'));
   const curriculum = JSON.parse(readFileSync('content/curriculum.json', 'utf8'));
   const places = JSON.parse(readFileSync('content/places.json', 'utf8'));
-  const root = 'content/sessions';
   const session = arg('--day') ? curriculum.sessions.find((s) => s.day === Number(arg('--day'))) : nextSession(curriculum, root);
   if (!session) { console.error('No session to write.'); return 1; }
+  const target = session && join(root, dayDir(session.day), 'script.md');
+  if (session && existsSync(target)) { console.error(`Refusing to overwrite existing script: ${target}`); return 1; }
   const place = places.places.find((p) => p.id === session.place);
   try {
     const out = await generate({
@@ -155,7 +165,7 @@ export async function main(argv, provider) {
     });
     const dir = join(root, dayDir(session.day));
     mkdirSync(dir, { recursive: true });
-    if (!argv.includes('--dry-run')) writeFileSync(join(dir, 'script.md'), out.text);
+    if (!argv.includes('--dry-run')) writeFileSync(target, out.text, { flag: 'wx' });
     console.error(`Day ${session.day}: draft passes the lint after ${out.revisions} revision(s); est. spend $${out.spentUsd.toFixed(2)}. Not voiced or published; listen and approve first.`);
     return 0;
   } catch (e) {
