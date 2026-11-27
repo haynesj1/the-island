@@ -70,6 +70,14 @@ describe('generate', () => {
     await expect(generate({ session, place, island, provider: p, config, spentUsd: 5 })).rejects.toBeInstanceOf(CostCapError);
     expect(p.calls).toHaveLength(0);
   });
+
+  it('exposes the spend of a failed attempt (including earlier weekly spend) on the error', async () => {
+    const bad = 'You will cure your anxiety.';
+    const p = fake({ outline: ['o'], draft: [bad], critic: ['OK'], revise: [bad] });
+    const err = await Promise.resolve(generate({ session, place, island, provider: p, config, spentUsd: 1 })).then(() => null, (e: unknown) => e as { message: string; spentUsd: number });
+    expect(err?.message).toMatch(/still failing/);
+    expect(err?.spentUsd).toBeGreaterThan(1);
+  });
 });
 
 describe('critic checks', () => {

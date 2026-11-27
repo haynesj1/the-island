@@ -1,0 +1,105 @@
+name: weekly-script
+
+# Drafts the next unwritten session, adds a separate model safety review and opens a PR for Jordan.
+# Nothing is voiced or published: approval is Jordan merging the PR.
+# Needs the repo secret ANTHROPIC_API_KEY (added by Jordan) and, under Settings > Actions > General,
+# "Allow GitHub Actions to create and approve pull requests".
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Curriculum day to draft (blank = next unwritten session)'
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: weekly-script
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      INPUT_DAY: ${{ inputs.day }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pick the day
+        run: |
+          if [ -n "$INPUT_DAY" ]; then
+            case "$INPUT_DAY" in (*[!0-9]*) echo "day must be a number" >&2; exit 1;; esac
+            echo "DAY=$INPUT_DAY" >> "$GITHUB_ENV"
+          else
+            node --input-type=module -e "
+              import { readFileSync } from 'node:fs';
+              import { nextSession } from './scripts/generate-script.mjs';
+              const s = nextSession(JSON.parse(readFileSync('content/curriculum.json', 'utf8')));
+              if (!s) { console.error('No session left to write.'); process.exit(1); }
+              console.log('DAY=' + s.day);
+            " >> "$GITHUB_ENV"
+          fi
+      - name: Skip if a draft for this day is already open
+        run: |
+          existing=$(gh pr list --state open --head "draft/day-$DAY" --json number --jq 'length')
+          if [ "$existing" != "0" ]; then echo "A draft PR for day $DAY is already open." >&2; exit 1; fi
+      - name: Remove a leftover branch from a rejected draft
+        run: |
+          # No open PR for this day, so any draft/day-N branch is left over from a closed draft.
+          if git ls-remote --exit-code --heads origin "draft/day-$DAY" >/dev/null 2>&1; then
+            echo "Deleting leftover branch draft/day-$DAY from a closed draft." >&2
+            git push origin --delete "draft/day-$DAY"
+          fi
+      - name: Add up this week's spend from earlier runs
+        run: |
+          # Each run uploads an artifact named spend-<ISO week>-<cents>-<run>-<attempt>, failed runs included.
+          week=$(date -u +%G-W%V)
+          echo "WEEK=$week" >> "$GITHUB_ENV"
+          cents=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired | not) | .name' \
+            | node scripts/weekly-spend.mjs sum "$week")
+          echo "PRIOR_USD=$(awk -v c="$cents" 'BEGIN { printf "%.4f", c / 100 }')" >> "$GITHUB_ENV"
+          echo "Spent earlier this week: $cents cents." >&2
+      - name: Generate the draft (outline, draft, critic, revise, lint)
+        run: node scripts/generate-script.mjs --day "$DAY" --spent-usd "$PRIOR_USD" --spend-out "$RUNNER_TEMP/spend.json"
+      - name: Separate model safety review
+        run: node scripts/safety-review.mjs --day "$DAY" --spend-file "$RUNNER_TEMP/spend.json" --body-out "$RUNNER_TEMP/body.md" --review-out "$RUNNER_TEMP/review.md"
+      - name: Open the PR for Jordan
+        run: |
+          pad=$(printf '%03d' "$DAY")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "draft/day-$DAY"
+          git add "content/sessions/$pad/script.md"
+          git commit -m "content: draft script for day $DAY (awaiting Jordan's listen)"
+          git push origin "draft/day-$DAY"
+          gh label create "needs-jordan-approval" --description "Draft script: Jordan listens, then merges to approve" --color FBCA04 2>/dev/null || true
+          url=$(gh pr create --base main --head "draft/day-$DAY" --title "Draft script: day $DAY" --body-file "$RUNNER_TEMP/body.md" --label needs-jordan-approval)
+          gh pr comment "$url" --body-file "$RUNNER_TEMP/review.md"
+      - name: Record this run's spend (also after a failure)
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/spend.json" ] || exit 0
+          mkdir -p "$RUNNER_TEMP/spend-record"
+          echo "SPEND_NAME=$(node scripts/weekly-spend.mjs name "$WEEK" "$RUNNER_TEMP/spend.json" "$PRIOR_USD" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT")" >> "$GITHUB_ENV"
+          cp "$RUNNER_TEMP/spend.json" "$RUNNER_TEMP/spend-record/spend.json"
+      - name: Upload spend record
+        if: always() && env.SPEND_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SPEND_NAME }}
+          path: ${{ runner.temp }}/spend-record/spend.json
+          retention-days: 14

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Draft generator: next unwritten curriculum session -> outline -> draft -> critic -> revise -> lint.
 // Writes content/sessions/<day>/script.md locally. Nothing is voiced or published.
-// Usage: node scripts/generate-script.mjs [--day N] [--spent-usd X] [--dry-run]
+// Usage: node scripts/generate-script.mjs [--day N] [--spent-usd X] [--spend-out FILE] [--dry-run]
 // The only secret read is ANTHROPIC_API_KEY (environment); agents never handle it.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -87,6 +87,16 @@ export function makeBudget(config, spentUsd = 0) {
  */
 export async function generate({ session, place, island, recent = [], provider, config, spentUsd = 0 }) {
   const budget = makeBudget(config, spentUsd);
+  try {
+    return await generateWith({ session, place, island, recent, provider, config, budget });
+  } catch (e) {
+    // Failed attempts still cost money: expose the spend so callers can persist it.
+    if (e && typeof e === 'object') e.spentUsd = budget.total();
+    throw e;
+  }
+}
+
+async function generateWith({ session, place, island, recent, provider, config, budget }) {
   const call = async (stage, system, prompt) => {
     const maxTokens = config.maxOutputTokens[stage];
     budget.check(stage, system + prompt, maxTokens);
@@ -166,9 +176,11 @@ export async function main(argv, provider, root = 'content/sessions') {
     const dir = join(root, dayDir(session.day));
     mkdirSync(dir, { recursive: true });
     if (!argv.includes('--dry-run')) writeFileSync(target, out.text, { flag: 'wx' });
+    if (arg('--spend-out')) writeFileSync(arg('--spend-out'), JSON.stringify({ day: session.day, revisions: out.revisions, spentUsd: out.spentUsd }));
     console.error(`Day ${session.day}: draft passes the lint after ${out.revisions} revision(s); est. spend $${out.spentUsd.toFixed(2)}. Not voiced or published; listen and approve first.`);
     return 0;
   } catch (e) {
+    if (arg('--spend-out') && typeof e.spentUsd === 'number') writeFileSync(arg('--spend-out'), JSON.stringify({ day: session.day, revisions: 0, spentUsd: e.spentUsd, failed: true }));
     console.error(e instanceof CostCapError ? `Cost cap: ${e.message}` : `Failed: ${e.message}`);
     return 1;
   }
