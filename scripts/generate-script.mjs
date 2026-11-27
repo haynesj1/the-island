@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Draft generator: next unwritten curriculum session -> outline -> draft -> critic -> revise -> lint.
 // Writes content/sessions/<day>/script.md locally. Nothing is voiced or published.
-// Usage: node scripts/generate-script.mjs [--day N] [--spent-usd X] [--dry-run]
+// Usage: node scripts/generate-script.mjs [--day N] [--spent-usd X] [--spend-out FILE] [--dry-run]
 // The only secret read is ANTHROPIC_API_KEY (environment); agents never handle it.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -166,6 +166,7 @@ export async function main(argv, provider, root = 'content/sessions') {
     const dir = join(root, dayDir(session.day));
     mkdirSync(dir, { recursive: true });
     if (!argv.includes('--dry-run')) writeFileSync(target, out.text, { flag: 'wx' });
+    if (arg('--spend-out')) writeFileSync(arg('--spend-out'), JSON.stringify({ day: session.day, revisions: out.revisions, spentUsd: out.spentUsd }));
     console.error(`Day ${session.day}: draft passes the lint after ${out.revisions} revision(s); est. spend $${out.spentUsd.toFixed(2)}. Not voiced or published; listen and approve first.`);
     return 0;
   } catch (e) {

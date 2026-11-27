@@ -4,7 +4,7 @@
   "maxRevisions": 3,
   "recentScripts": 3,
   "similarityLimit": 0.2,
-  "maxOutputTokens": { "outline": 1000, "draft": 4000, "critic": 800, "revise": 4000 },
+  "maxOutputTokens": { "outline": 1000, "draft": 4000, "critic": 800, "safety": 1500, "revise": 4000 },
   "pricing": { "inputPerMTokUsd": 3, "outputPerMTokUsd": 15 },
   "model": "claude-sonnet-5-5"
 }
