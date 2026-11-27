@@ -60,9 +60,11 @@ export async function main(argv, provider, root = 'content/sessions') {
     const review = await reviewScript({ text, guardrails, provider: provider ?? anthropicProvider(config), config, spentUsd: spend.spentUsd });
     writeFileSync(arg('--body-out') ?? 'pr-body.md', formatPrBody({ session, revisions: spend.revisions, spentUsd: review.spentUsd, review }));
     writeFileSync(arg('--review-out') ?? 'review.md', formatReview(review) + '\n');
+    if (arg('--spend-file')) writeFileSync(arg('--spend-file'), JSON.stringify({ ...spend, spentUsd: review.spentUsd }));
     console.error(review.pass ? 'Safety review: no findings.' : `Safety review: ${review.findings.length} finding(s); they go on the PR.`);
     return 0;
   } catch (e) {
+    if (arg('--spend-file') && typeof e.spentUsd === 'number') writeFileSync(arg('--spend-file'), JSON.stringify({ ...spend, spentUsd: e.spentUsd }));
     console.error(e instanceof CostCapError ? `Cost cap: ${e.message}` : `Failed: ${e.message}`);
     return 1;
   }

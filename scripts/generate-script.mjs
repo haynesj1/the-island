@@ -87,6 +87,16 @@ export function makeBudget(config, spentUsd = 0) {
  */
 export async function generate({ session, place, island, recent = [], provider, config, spentUsd = 0 }) {
   const budget = makeBudget(config, spentUsd);
+  try {
+    return await generateWith({ session, place, island, recent, provider, config, budget });
+  } catch (e) {
+    // Failed attempts still cost money: expose the spend so callers can persist it.
+    if (e && typeof e === 'object') e.spentUsd = budget.total();
+    throw e;
+  }
+}
+
+async function generateWith({ session, place, island, recent, provider, config, budget }) {
   const call = async (stage, system, prompt) => {
     const maxTokens = config.maxOutputTokens[stage];
     budget.check(stage, system + prompt, maxTokens);
@@ -170,6 +180,7 @@ export async function main(argv, provider, root = 'content/sessions') {
     console.error(`Day ${session.day}: draft passes the lint after ${out.revisions} revision(s); est. spend $${out.spentUsd.toFixed(2)}. Not voiced or published; listen and approve first.`);
     return 0;
   } catch (e) {
+    if (arg('--spend-out') && typeof e.spentUsd === 'number') writeFileSync(arg('--spend-out'), JSON.stringify({ day: session.day, revisions: 0, spentUsd: e.spentUsd, failed: true }));
     console.error(e instanceof CostCapError ? `Cost cap: ${e.message}` : `Failed: ${e.message}`);
     return 1;
   }
