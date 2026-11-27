@@ -1,13 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-import Player from '../components/Player.svelte';
+import TodaySession from '../components/TodaySession.svelte';
+import { listSessions } from '../lib/session-list';
 import { SITE_NAME, TAGLINE } from '../lib/site';
+const sessions = listSessions().map(({ slug, day, title, audio, minutes }) => ({ slug, day, title, audio, minutes }));
 ---
 <Base title={`${SITE_NAME} – guided relaxation`}>
   <main>
     <h1>{SITE_NAME}</h1>
     <p class="tagline">{TAGLINE}</p>
-    <Player client:load />
+    <TodaySession client:load {sessions} />
   </main>
 </Base>
 <style>
