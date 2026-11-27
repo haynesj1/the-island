@@ -1,5 +1,6 @@
 ---
 import { SITE_NAME, TAGLINE } from '../lib/site';
+import { SUPPORT_PATH, SUPPORT_LINK_TEXT } from '../lib/support';
 interface Props { title?: string }
 const { title = SITE_NAME } = Astro.props;
 ---
@@ -18,6 +19,9 @@ const { title = SITE_NAME } = Astro.props;
   </head>
   <body>
     <slot />
+    <footer class="site-footer">
+      <a href={SUPPORT_PATH}>{SUPPORT_LINK_TEXT}</a>
+    </footer>
     <script is:inline>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -31,6 +35,8 @@ const { title = SITE_NAME } = Astro.props;
   :root { color-scheme: light dark; }
   body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.6; background: #f4f8f6; color: #1d2b28; }
   @media (prefers-color-scheme: dark) { body { background: #14211f; color: #e4efec; } }
+  .site-footer { max-width: 40rem; margin: 0 auto; padding: 1rem 1rem 2rem; }
+  .site-footer a { display: inline-block; padding: 0.5rem 0; color: inherit; }
   :focus-visible { outline: 3px solid #2f5d57; outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>

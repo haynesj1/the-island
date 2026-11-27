@@ -1,0 +1,18 @@
+---
+import { readFileSync } from 'node:fs';
+import Base from '../layouts/Base.astro';
+import { Content } from '../../content/signposting.md';
+import { isSupportPlaceholder, SUPPORT_LINK_TEXT, SUPPORT_PENDING_TEXT } from '../lib/support';
+
+const pending = isSupportPlaceholder(readFileSync('content/signposting.md', 'utf8'));
+---
+<Base title={`${SUPPORT_LINK_TEXT} – The Island`}>
+  <main>
+    <h1>{SUPPORT_LINK_TEXT}</h1>
+    {pending ? <p>{SUPPORT_PENDING_TEXT}</p> : <div class="text"><Content /></div>}
+  </main>
+</Base>
+<style>
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-weight: 600; margin: 0 0 0.5rem; }
+</style>
