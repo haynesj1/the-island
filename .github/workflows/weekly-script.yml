@@ -70,7 +70,7 @@ jobs:
           week=$(date -u +%G-W%V)
           echo "WEEK=$week" >> "$GITHUB_ENV"
           cents=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired | not) | .name' \
-            | awk -F- -v w="spend-$week-" 'index($0, w) == 1 { split(substr($0, length(w) + 1), a, "-"); t += a[1] } END { print t + 0 }')
+            | node scripts/weekly-spend.mjs sum "$week")
           echo "PRIOR_USD=$(awk -v c="$cents" 'BEGIN { printf "%.4f", c / 100 }')" >> "$GITHUB_ENV"
           echo "Spent earlier this week: $cents cents." >&2
       - name: Generate the draft (outline, draft, critic, revise, lint)
@@ -94,11 +94,7 @@ jobs:
         run: |
           [ -f "$RUNNER_TEMP/spend.json" ] || exit 0
           mkdir -p "$RUNNER_TEMP/spend-record"
-          cents=$(node -e "
-            const s = JSON.parse(require('node:fs').readFileSync(process.argv[1], 'utf8'));
-            console.log(Math.max(0, Math.ceil((s.spentUsd - Number(process.env.PRIOR_USD || 0)) * 100)));
-          " "$RUNNER_TEMP/spend.json")
-          echo "SPEND_NAME=spend-$WEEK-$cents-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "SPEND_NAME=$(node scripts/weekly-spend.mjs name "$WEEK" "$RUNNER_TEMP/spend.json" "$PRIOR_USD" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT")" >> "$GITHUB_ENV"
           cp "$RUNNER_TEMP/spend.json" "$RUNNER_TEMP/spend-record/spend.json"
       - name: Upload spend record
         if: always() && env.SPEND_NAME != ''
