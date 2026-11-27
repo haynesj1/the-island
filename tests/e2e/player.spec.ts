@@ -59,6 +59,8 @@ test('rate before, listen to the end, rate after; stored on the device and clear
   await expect(page.getByRole('button', { name: '2 of 5' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Eyes open' }).click();
   await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+  // The end of the session and the question are announced to screen readers, as the finish message was before.
+  await expect(page.getByRole('status')).toContainText('The session has finished. How calm do you feel now?');
   await page.getByRole('button', { name: '4 of 5' }).click();
   await expect(page.getByRole('status')).toContainText('Thank you');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('island.calm-ratings.v1')!));

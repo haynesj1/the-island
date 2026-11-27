@@ -107,7 +107,7 @@
     <button type="button" onclick={again}>Try again</button>
   {:else if state.phase === 'ended'}
     {#if !closed}
-      <p id="after-question">The session has finished. How calm do you feel now? This is optional.</p>
+      <p id="after-question" role="status">The session has finished. How calm do you feel now? This is optional.</p>
       <div class="row" role="group" aria-labelledby="after-question">
         {#each SCALE as n (n)}
           <button type="button" class="scale" aria-label={ratingLabel(n)} onclick={() => finishRating(n)}>{n}</button>
