@@ -48,3 +48,33 @@ test('registers Media Session handlers for background playback', async ({ page }
   const title = await page.evaluate(() => navigator.mediaSession.metadata?.title);
   expect(title).toBe('Fixture session');
 });
+
+const WAV = (route: import('@playwright/test').Route) =>
+  route.fulfill({ status: 200, contentType: 'audio/wav', body: silentWav(1) });
+
+test('rate before, listen to the end, rate after; stored on the device and clearable', async ({ page }) => {
+  await page.route('**/fixture-silence.wav', WAV);
+  await page.goto('/player-check/');
+  await page.getByRole('button', { name: '2 of 5' }).click();
+  await expect(page.getByRole('button', { name: '2 of 5' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Eyes open' }).click();
+  await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: '4 of 5' }).click();
+  await expect(page.getByRole('status')).toContainText('Thank you');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('island.calm-ratings.v1')!));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({ before: 2, after: 4 });
+  await expect(page.getByText('1 rating saved on this device only.')).toBeVisible();
+  await page.getByRole('button', { name: 'Clear my ratings' }).click();
+  expect(await page.evaluate(() => localStorage.getItem('island.calm-ratings.v1'))).toBeNull();
+});
+
+test('skipping both ratings is fine and stores nothing', async ({ page }) => {
+  await page.route('**/fixture-silence.wav', WAV);
+  await page.goto('/player-check/');
+  await page.getByRole('button', { name: 'Eyes closed' }).click();
+  await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Skip' }).click();
+  await expect(page.getByRole('status')).toContainText('Thank you');
+  expect(await page.evaluate(() => localStorage.getItem('island.calm-ratings.v1'))).toBeNull();
+});

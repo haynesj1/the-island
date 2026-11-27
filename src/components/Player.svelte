@@ -1,10 +1,40 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { initialState, reduce, toggleLabel, type EyeMode, type PlayerEvent } from '../lib/player-state';
+  import { SCALE, clearRatings, loadRatings, ratingLabel, saveRating, type Rating } from '../lib/calm-rating';
 
   let { title = 'Session player', src = undefined }: { title?: string; src?: string } = $props();
 
   let state = $state(initialState);
   let audio: HTMLAudioElement | undefined = $state();
+  let before: Rating | null = $state(null);
+  let after: Rating | null = $state(null);
+  let closed = $state(false); // the after-question has been answered or skipped
+  let saved = $state(0);
+
+  function store() {
+    try {
+      return globalThis.localStorage;
+    } catch {
+      return undefined;
+    }
+  }
+
+  onMount(() => {
+    saved = loadRatings(store()).length;
+  });
+
+  function finishRating(value: Rating | null) {
+    after = value;
+    closed = true;
+    saveRating(store(), { at: new Date().toISOString(), session: title, before, after });
+    saved = loadRatings(store()).length;
+  }
+
+  function clearAll() {
+    clearRatings(store());
+    saved = 0;
+  }
 
   function send(event: PlayerEvent) {
     state = reduce(state, event);
@@ -39,6 +69,9 @@
       audio.load(); // clears a failed source so the next play re-requests it
     }
     send({ type: 'restart' });
+    before = null;
+    after = null;
+    closed = false;
   }
 </script>
 
@@ -58,7 +91,13 @@
     <p>Sessions are on their way. The player will appear here.</p>
     <button type="button" disabled>Play</button>
   {:else if state.phase === 'choose'}
-    <p id="eyes-question">Before we begin: would you like to keep your eyes open or closed? You can stop at any time.</p>
+    <p id="before-question">How calm do you feel right now? This is optional, and you can skip it.</p>
+    <div class="row" role="group" aria-labelledby="before-question">
+      {#each SCALE as n (n)}
+        <button type="button" class="scale" aria-pressed={before === n} aria-label={ratingLabel(n)} onclick={() => (before = before === n ? null : n)}>{n}</button>
+      {/each}
+    </div>
+    <p id="eyes-question" class="gap">Before we begin: would you like to keep your eyes open or closed? You can stop at any time.</p>
     <div class="row" role="group" aria-labelledby="eyes-question">
       <button type="button" onclick={() => begin('open')}>Eyes open</button>
       <button type="button" onclick={() => begin('closed')}>Eyes closed</button>
@@ -67,11 +106,27 @@
     <p role="alert">Sorry, the audio could not play. Check your connection and try again.</p>
     <button type="button" onclick={again}>Try again</button>
   {:else if state.phase === 'ended'}
-    <p role="status">The session has finished. Take your time.</p>
-    <button type="button" onclick={again}>Listen again</button>
+    {#if !closed}
+      <p id="after-question">The session has finished. How calm do you feel now? This is optional.</p>
+      <div class="row" role="group" aria-labelledby="after-question">
+        {#each SCALE as n (n)}
+          <button type="button" class="scale" aria-label={ratingLabel(n)} onclick={() => finishRating(n)}>{n}</button>
+        {/each}
+        <button type="button" onclick={() => finishRating(null)}>Skip</button>
+      </div>
+    {:else}
+      <p role="status">Thank you for taking this time. Come back whenever you like.</p>
+      <button type="button" onclick={again}>Listen again</button>
+    {/if}
   {:else}
     <p role="status">{state.eyes === 'closed' ? 'Eyes closed' : 'Eyes open'} · {state.phase === 'playing' ? 'Playing' : state.phase === 'paused' ? 'Paused' : 'Starting'}</p>
     <button type="button" onclick={toggle} disabled={state.phase === 'loading'}>{toggleLabel(state.phase)}</button>
+  {/if}
+  {#if saved > 0}
+    <p class="note">
+      {saved} {saved === 1 ? 'rating' : 'ratings'} saved on this device only.
+      <button type="button" class="link" onclick={clearAll}>Clear my ratings</button>
+    </p>
   {/if}
 </section>
 
@@ -81,5 +136,10 @@
   p { margin: 0 0 1rem; }
   .row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
   button { font: inherit; padding: 0.6rem 1.25rem; border-radius: 999px; border: 1px solid #2f5d57; background: #fff; color: #2f5d57; min-height: 44px; cursor: pointer; }
+  .scale { min-width: 44px; padding: 0.6rem 0; }
+  .scale[aria-pressed='true'] { background: #2f5d57; color: #fff; }
+  .gap { margin-top: 1.25rem; }
+  .note { margin: 1rem 0 0; font-size: 0.875rem; }
+  .link { border: 0; background: none; text-decoration: underline; padding: 0.6rem 0.25rem; }
   button:disabled { opacity: 0.6; cursor: default; }
 </style>
