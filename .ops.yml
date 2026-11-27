@@ -8,6 +8,8 @@ e2e: npx playwright test --trace off
 # Agent-safe tier (portfolio-ops decision 0005): agent PRs for queued, non-pivotal issues merge without human-approved unless they touch a path below.
 agent_safe: true
 agent_max_lines: 400
+# Trial (portfolio-ops decision 0017): a pull request held only by a pivotal_paths file goes to the stronger session's check, not to Jordan, when the issue it implements names a spec that is approved on the default branch. To turn it off, remove the next line.
+pivotal_spec_check: true
 sensitive_paths:
   - docs/script-guardrails.md  # safety rules every session script must pass
   - scripts/lint-script.mjs  # the automated safety lint; a wrong change could let an unsafe script through
