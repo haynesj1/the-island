@@ -1,6 +1,6 @@
 # The Island — vision
 
-*Draft for Jordan's review, 8 November 2026. Once approved, this is the contract: agents may not change it, and every issue and PR is judged against it.*
+*Approved by Jordan on 8 November 2026 (#7); last changed by him on 27 November 2026 (#43). This is the contract: agents may not change it, and every issue and PR is judged against it.*
 
 ## What it is
 
@@ -36,7 +36,7 @@ The app is **done** when all of these are true:
 - [ ] **Live** at a public URL as an installable PWA (Astro + a small Svelte audio player on Cloudflare; audio and images on R2).
 - [ ] **The 100-day curriculum map:** all 100 days planned by phase (what each phase practises, session length, maximum silence), with the place each session visits.
 - [ ] **The world bible:** every place on the island described once, with fixed sensory details and an image.
-- [ ] **Phase 1 published:** about 6 sessions released weekly from mid-November, each passing the guardrails, the automated safety lint, a model safety review and Jordan's listen.
+- [ ] **Phase 1 published:** six sessions available to listen to by 1 January 2027, each passing the guardrails, the automated safety lint, a model safety review and Jordan's listen. They need not be released a week apart.
 - [ ] **The content pipeline runs weekly** as a GitHub Action: script → lint → safety review → Jordan's approval → voice → silences and mastering (−16 LUFS) → image → publish, within about US$5 a week.
 - [ ] **Before-and-after calm rating** on every session, stored on the device, with an optional anonymous share of the two numbers only.
 - [ ] **Accessible and calm to use:** works at 375 px, keyboard and screen-reader friendly, reduced motion respected, transcripts for every session.
@@ -47,12 +47,17 @@ The app is **done** when all of these are true:
 
 Accounts or cross-device sync; payments; sleep stories longer than about 20 minutes; music-only tracks; user-written scripts; live AI generation in the app; push notifications; languages other than English; any clinical or "programme for anxiety" positioning.
 
-## Open questions for Jordan
+## Decisions
 
-1. **Session length:** 8–12 minutes for phase 1, growing slowly? (Recommended: start at 8, cap phase 1 at 12.)
-2. **Voice:** one narrator voice for the whole island, or one per region? (Recommended: one voice, for consistency.)
-3. **Sharing calm ratings:** off by default with an opt-in, or not at all in 2026? (Recommended: opt-in, anonymous, two numbers only.)
-4. **Name and domain:** keep "The Island", or something more distinctive? Subdomain of the portfolio domain?
+Answered by Jordan on 9 November (#10) and 27 November 2026 (#43).
+
+1. **Session length:** phase 1 sessions start at 8 minutes and are capped at 12.
+2. **Voice:** one narrator voice for the whole island.
+3. **Sharing calm ratings:** opt-in, anonymous, the two numbers only, through a small endpoint that stores counts and nothing about the listener ([`specs/share-rating.md`](../specs/share-rating.md)).
+4. **Name and domain:** "The Island" stays. The app goes live on Cloudflare's free address first and moves to a subdomain of the portfolio domain once that exists.
+5. **Pictures:** every place has one fixed picture and every session has its own, all in one calm island style that Jordan chooses from a trial ([`specs/visual-style.md`](../specs/visual-style.md)). The screens share that look.
+6. **Support page:** built with a placeholder; the app cannot go live until Jordan's own text replaces it.
+7. **Release:** Jordan's merge of a finished episode is its release. The weekly pipeline prepares; it never publishes.
 
 ## Order of work
 

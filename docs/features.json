@@ -1,19 +1,20 @@
 {
   "version": 1,
   "features": [
-    { "id": "live-installable", "title": "Open The Island at its public web address and install it as an app", "issues": [] },
     { "id": "land", "title": "Understand in seconds what the app is and that it is not therapy", "delivered": "PR #28: tagline in src/lib/site.ts shown on src/pages/index.astro, checked by tests/e2e/smoke.spec.ts" },
     { "id": "curriculum-map", "title": "A planned 100-day programme, phase by phase, with a place for each session", "issues": [13] },
-    { "id": "world-bible", "title": "Every place on the island described the same way each time, with an image", "issues": [] },
-    { "id": "phase-1-sessions", "title": "About six relaxation sessions published, one a week", "issues": [] },
     { "id": "weekly-pipeline", "title": "A new session prepared every week, checked for safety and voiced for Jordan's listen", "issues": [22, 23, 24, 25] },
     { "id": "todays-session", "title": "See today's session on the home page and save it to use offline", "issues": [27] },
     { "id": "listen", "title": "Listen with eyes open or closed, with pause and resume and the screen off", "issues": [26] },
     { "id": "calm-rating", "title": "Rate how calm you feel before and after a session, kept on your device", "issues": [18] },
-    { "id": "share-rating", "title": "Optionally share the two calm numbers anonymously", "issues": [] },
+    { "id": "visual-style", "title": "The screens and pictures share one calm island look, chosen by Jordan from a trial", "issues": [44, 46, 47] },
+    { "id": "world-bible", "title": "Every place on the island described the same way each time, with an image", "issues": [12, 48] },
     { "id": "island-map", "title": "See where you have been on the island map and revisit earlier sessions", "issues": [19] },
+    { "id": "support-page", "title": "Find an \"if you need more support\" page from every session", "issues": [21, 45] },
     { "id": "accessible-calm", "title": "Use it comfortably on a phone, by keyboard or screen reader, with a transcript for every session", "issues": [20] },
-    { "id": "support-page", "title": "Find an \"if you need more support\" page from every session", "issues": [21] },
+    { "id": "share-rating", "title": "Optionally share the two calm numbers anonymously", "issues": [49] },
+    { "id": "live-installable", "title": "Open The Island at its public web address and install it as an app", "issues": [50, 51] },
+    { "id": "phase-1-sessions", "title": "Six relaxation sessions ready to listen to", "issues": [52] },
     { "id": "portfolio-ready", "title": "A case study and an embedded sample session on the portfolio site", "issues": [] },
     { "id": "walk-through", "title": "Owner walk-through of the finished app", "issues": [33], "walkthrough": true }
   ]
