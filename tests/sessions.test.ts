@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localDateString, parseScript, programmeDay, todaysSession, type SessionInfo } from '../src/lib/sessions';
+import { isReleased, localDateString, parseScript, programmeDay, todaysSession, type SessionInfo } from '../src/lib/sessions';
 
 const s = (slug: string, day: number): SessionInfo => ({ slug, day, title: slug, audio: `/audio/${slug}.mp3` });
 
@@ -44,4 +44,12 @@ describe('parseScript', () => {
     expect(parseScript(text).transcript).toEqual(['First line.', 'Second para.']);
   });
   it('falls back to the heading for a title', () => expect(parseScript('# Only heading\n\nHi.').title).toBe('Only heading'));
+});
+
+describe('isReleased', () => {
+  it('is true only with released: true', () => {
+    expect(isReleased(parseScript('---\nreleased: true\n---\n# T\n\nHi.').meta)).toBe(true);
+    expect(isReleased(parseScript('---\nday: 1\n---\n# T\n\nHi.').meta)).toBe(false);
+    expect(isReleased({})).toBe(false);
+  });
 });

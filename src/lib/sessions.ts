@@ -16,6 +16,11 @@ export interface ParsedScript {
   transcript: string[];
 }
 
+/** A script is published only when Jordan has approved it and added `released: true` to its front matter. */
+export function isReleased(meta: Record<string, string>): boolean {
+  return meta.released === 'true';
+}
+
 const TOKEN = /\[(?:PAUSE|SILENCE) \d+ s\]/g;
 
 export function parseScript(text: string): ParsedScript {

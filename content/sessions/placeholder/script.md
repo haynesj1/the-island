@@ -2,6 +2,7 @@
 speech_minutes: 2.4
 max_silence_seconds: 20
 day: 0
+released: true
 title: Placeholder: the shoreline hut
 audio: /audio/placeholder.wav
 ---
