@@ -140,4 +140,20 @@ test.describe('anonymous share of the two numbers', () => {
     await expect(page.getByText('Thank you')).toBeVisible();
     await expect(page.getByText('Share these two numbers anonymously?')).toBeHidden();
   });
+  test('opting out in this visit holds even when the device cannot store the choice', async ({ page }) => {
+    await page.addInitScript(() => {
+      Storage.prototype.setItem = function () {
+        throw new Error('blocked');
+      };
+    });
+    await page.route('**/fixture-silence.wav', WAV);
+    await page.goto('/player-check/');
+    await page.getByLabel('Ask to share my calm numbers').uncheck();
+    await page.getByRole('button', { name: '2 of 5' }).click();
+    await page.getByRole('button', { name: 'Eyes open' }).click();
+    await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '4 of 5' }).click();
+    await expect(page.getByText('Thank you')).toBeVisible();
+    await expect(page.getByText('Share these two numbers anonymously?')).toBeHidden();
+  });
 });

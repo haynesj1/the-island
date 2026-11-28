@@ -35,7 +35,7 @@
     closed = true;
     saveRating(store(), { at: new Date().toISOString(), session: title, before, after });
     saved = loadRatings(store()).length;
-    sharePrompt = shouldAsk(endpoint, store(), buildPayload(day, before, after));
+    sharePrompt = askToShare && shouldAsk(endpoint, store(), buildPayload(day, before, after));
   }
 
   async function share(choice: boolean) {
