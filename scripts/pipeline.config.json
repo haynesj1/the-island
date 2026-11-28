@@ -1,10 +1,43 @@
 {
   "weeklyCapUsd": 5,
-  "stageShare": { "outline": 0.1, "draft": 0.4, "critic": 0.15, "revise": 0.35 },
+  "stageShare": {
+    "outline": 0.1,
+    "draft": 0.4,
+    "critic": 0.15,
+    "revise": 0.35
+  },
   "maxRevisions": 3,
   "recentScripts": 3,
   "similarityLimit": 0.2,
-  "maxOutputTokens": { "outline": 1000, "draft": 4000, "critic": 800, "safety": 1500, "revise": 4000 },
-  "pricing": { "inputPerMTokUsd": 3, "outputPerMTokUsd": 15 },
-  "model": "claude-sonnet-5-5"
+  "maxOutputTokens": {
+    "outline": 1000,
+    "draft": 4000,
+    "critic": 800,
+    "safety": 1500,
+    "revise": 4000
+  },
+  "pricing": {
+    "inputPerMTokUsd": 3,
+    "outputPerMTokUsd": 15
+  },
+  "model": "claude-sonnet-5-5",
+  "voice": {
+    "baseUrl": "https://api.elevenlabs.io",
+    "model": "eleven_multilingual_v2",
+    "voiceId": "",
+    "seed": 1,
+    "sampleRate": 24000,
+    "settings": {
+      "stability": 0.75,
+      "similarity_boost": 0.75,
+      "style": 0,
+      "speed": 0.9
+    }
+  },
+  "audio": {
+    "targetLufs": -16,
+    "toleranceLu": 1,
+    "maxTruePeakDb": -1,
+    "masterTruePeakDb": -1.5
+  }
 }
