@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { initialState, reduce, toggleLabel, type EyeMode, type PlayerEvent } from '../lib/player-state';
+  import { askEnabled, buildPayload, sendShare, setAskEnabled, shareUrl, shouldAsk } from '../lib/share';
   import { SCALE, clearRatings, loadRatings, ratingLabel, saveRating, type Rating } from '../lib/calm-rating';
 
-  let { title = 'Session player', src = undefined }: { title?: string; src?: string } = $props();
+  let { title = 'Session player', src = undefined, day = undefined }: { title?: string; src?: string; day?: number } = $props();
+
+  const endpoint = shareUrl();
 
   let state = $state(initialState);
   let audio: HTMLAudioElement | undefined = $state();
@@ -11,6 +14,8 @@
   let after: Rating | null = $state(null);
   let closed = $state(false); // the after-question has been answered or skipped
   let saved = $state(0);
+  let askToShare = $state(true);
+  let sharePrompt = $state(false); // the share line is showing for this session
 
   function store() {
     try {
@@ -22,6 +27,7 @@
 
   onMount(() => {
     saved = loadRatings(store()).length;
+    askToShare = askEnabled(store());
   });
 
   function finishRating(value: Rating | null) {
@@ -29,6 +35,18 @@
     closed = true;
     saveRating(store(), { at: new Date().toISOString(), session: title, before, after });
     saved = loadRatings(store()).length;
+    sharePrompt = shouldAsk(endpoint, store(), buildPayload(day, before, after));
+  }
+
+  async function share(choice: boolean) {
+    sharePrompt = false;
+    const payload = buildPayload(day, before, after);
+    if (choice && payload) await sendShare(endpoint, payload); // a failure is silent by design
+  }
+
+  function toggleAsk(on: boolean) {
+    askToShare = on;
+    setAskEnabled(store(), on);
   }
 
   function clearAll() {
@@ -72,6 +90,7 @@
     before = null;
     after = null;
     closed = false;
+    sharePrompt = false;
   }
 </script>
 
@@ -116,6 +135,15 @@
       </div>
     {:else}
       <p role="status">Thank you for taking this time. Come back whenever you like.</p>
+      {#if sharePrompt}
+        <div class="share" role="group" aria-labelledby="share-question">
+          <p id="share-question">Share these two numbers anonymously? They help show whether sessions like this one feel calming. Nothing else is sent.</p>
+          <div class="row">
+            <button type="button" onclick={() => share(true)}>Share</button>
+            <button type="button" onclick={() => share(false)}>Not now</button>
+          </div>
+        </div>
+      {/if}
       <button type="button" onclick={again}>Listen again</button>
     {/if}
   {:else}
@@ -128,6 +156,12 @@
       <button type="button" class="link" onclick={clearAll}>Clear my ratings</button>
     </p>
   {/if}
+  {#if endpoint}
+    <label class="note setting">
+      <input type="checkbox" checked={askToShare} onchange={(e) => toggleAsk(e.currentTarget.checked)} />
+      Ask to share my calm numbers
+    </label>
+  {/if}
 </section>
 
 <style>
@@ -139,6 +173,9 @@
   .scale { min-width: 44px; padding: 0.6rem 0; }
   .scale[aria-pressed='true'] { background: #2f5d57; color: #fff; }
   .gap { margin-top: 1.25rem; }
+  .share { margin: 0 0 1rem; }
+  .setting { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; }
+  .setting input { width: 1.25rem; height: 1.25rem; }
   .note { margin: 1rem 0 0; font-size: 0.875rem; }
   .link { border: 0; background: none; text-decoration: underline; padding: 0.6rem 0.25rem; }
   button:disabled { opacity: 0.6; cursor: default; }

@@ -1,0 +1,12 @@
+# Deployed by Jordan; see README.md ("Sharing the two calm numbers").
+name = "the-island-share"
+main = "index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# The app's own web address, with no trailing slash. Change to the real address before deploying.
+ALLOWED_ORIGIN = "https://the-island.example"
+
+[[kv_namespaces]]
+binding = "SHARE_COUNTS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

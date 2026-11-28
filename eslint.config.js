@@ -19,4 +19,5 @@ export default [
     },
   },
   { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly', fetch: 'readonly' } } },
+  { files: ['worker/**'], languageOptions: { globals: { Response: 'readonly' } } },
 ];
