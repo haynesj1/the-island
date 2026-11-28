@@ -122,16 +122,16 @@ export async function voiceScript({ text, provider, config, outDir }) {
   return { audioFile, transcriptFile, loudness };
 }
 
-export async function main(argv, env = process.env) {
+export async function main(argv, env = process.env, root = '.') {
   const i = argv.indexOf('--day');
   const o = argv.indexOf('--out');
   if (i < 0 || !/^\d+$/.test(argv[i + 1] ?? '')) { console.error('usage: voice-script.mjs --day N [--out DIR]'); return 2; }
   const day = dayDir(argv[i + 1]);
   const outDir = o >= 0 ? argv[o + 1] : join('build', 'audio', day);
   if (!env.VOICE_API_KEY) { console.error('VOICE_API_KEY is not set'); return 1; }
-  const config = JSON.parse(readFileSync('scripts/pipeline.config.json', 'utf8'));
-  const text = readFileSync(join('content/sessions', day, 'script.md'), 'utf8');
   try {
+    const config = JSON.parse(readFileSync(join(root, 'scripts/pipeline.config.json'), 'utf8'));
+    const text = readFileSync(join(root, 'content/sessions', day, 'script.md'), 'utf8');
     const r = await voiceScript({ text, provider: httpProvider(config.voice, env.VOICE_API_KEY), config, outDir });
     console.error(`ok: ${r.audioFile} (${r.loudness.lufs} LUFS, ${r.loudness.truePeak} dBTP)`);
     return 0;
