@@ -80,3 +80,80 @@ test('skipping both ratings is fine and stores nothing', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Thank you');
   expect(await page.evaluate(() => localStorage.getItem('island.calm-ratings.v1'))).toBeNull();
 });
+
+test.describe('anonymous share of the two numbers', () => {
+  async function rateAndFinish(page: import('@playwright/test').Page, requests: string[]) {
+    await page.route('**/fixture-silence.wav', WAV);
+    await page.route('https://share.example.test/**', (route) => {
+      requests.push(route.request().method());
+      return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' } });
+    });
+    await page.goto('/player-check/');
+    await page.getByRole('button', { name: '2 of 5' }).click();
+    await page.getByRole('button', { name: 'Eyes open' }).click();
+    await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '4 of 5' }).click();
+  }
+
+  test('no request is made before Share is tapped, and Not now sends nothing', async ({ page }) => {
+    const requests: string[] = [];
+    await rateAndFinish(page, requests);
+    await expect(page.getByText('Share these two numbers anonymously?')).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(requests).toEqual([]);
+    await page.getByRole('button', { name: 'Not now' }).click();
+    await expect(page.getByText('Share these two numbers anonymously?')).toBeHidden();
+    await page.waitForTimeout(300);
+    expect(requests).toEqual([]);
+  });
+
+  test('Share sends one request with only the three numbers; a failure shows nothing', async ({ page }) => {
+    let body = '';
+    await page.route('**/fixture-silence.wav', WAV);
+    await page.route('https://share.example.test/**', (route) => {
+      if (route.request().method() === 'POST') body = route.request().postData() ?? '';
+      return route.abort();
+    });
+    await page.goto('/player-check/');
+    await page.getByRole('button', { name: '2 of 5' }).click();
+    await page.getByRole('button', { name: 'Eyes open' }).click();
+    await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '4 of 5' }).click();
+    await page.getByRole('button', { name: 'Share', exact: true }).click();
+    await expect.poll(() => body).not.toBe('');
+    expect(JSON.parse(body)).toEqual({ day: 3, before: 2, after: 4 });
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByText('1 rating saved on this device only.')).toBeVisible();
+  });
+
+  test('the setting is kept on the device', async ({ page }) => {
+    await page.goto('/player-check/');
+    await page.getByLabel('Ask to share my calm numbers').uncheck();
+    expect(await page.evaluate(() => localStorage.getItem('island.share-ask.v1'))).toBe('off');
+    await page.reload();
+    await expect(page.getByLabel('Ask to share my calm numbers')).not.toBeChecked();
+  });
+
+  test('with the setting off the question never appears', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('island.share-ask.v1', 'off'));
+    await rateAndFinish(page, []);
+    await expect(page.getByText('Thank you')).toBeVisible();
+    await expect(page.getByText('Share these two numbers anonymously?')).toBeHidden();
+  });
+  test('opting out in this visit holds even when the device cannot store the choice', async ({ page }) => {
+    await page.addInitScript(() => {
+      Storage.prototype.setItem = function () {
+        throw new Error('blocked');
+      };
+    });
+    await page.route('**/fixture-silence.wav', WAV);
+    await page.goto('/player-check/');
+    await page.getByLabel('Ask to share my calm numbers').uncheck();
+    await page.getByRole('button', { name: '2 of 5' }).click();
+    await page.getByRole('button', { name: 'Eyes open' }).click();
+    await expect(page.getByText('How calm do you feel now?')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '4 of 5' }).click();
+    await expect(page.getByText('Thank you')).toBeVisible();
+    await expect(page.getByText('Share these two numbers anonymously?')).toBeHidden();
+  });
+});
