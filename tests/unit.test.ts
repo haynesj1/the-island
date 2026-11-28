@@ -50,3 +50,16 @@ describe('manifest', () => {
     for (const i of m.icons) expect(() => readFileSync(`public${i.src}`)).not.toThrow();
   });
 });
+
+describe('service worker offline save', () => {
+  const sw = readFileSync('public/sw.js', 'utf8');
+  it('uses the same session cache name as the page and keeps it when the shell updates', async () => {
+    const { SESSION_CACHE } = await import('../src/lib/shell');
+    expect(sw).toContain(`const SESSION_CACHE = '${SESSION_CACHE}'`);
+    expect(sw).toContain('k !== SESSION_CACHE');
+  });
+  it('handles save-session messages and ranged audio requests', () => {
+    expect(sw).toContain("data.type !== 'save-session'");
+    expect(sw).toContain('status: 206');
+  });
+});

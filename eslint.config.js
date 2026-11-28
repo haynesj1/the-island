@@ -15,7 +15,7 @@ export default [
     languageOptions: {
       parser: svelteParser,
       parserOptions: { parser: ts.parser },
-      globals: { navigator: 'readonly', MediaMetadata: 'readonly', HTMLAudioElement: 'readonly' },
+      globals: { navigator: 'readonly', MediaMetadata: 'readonly', HTMLAudioElement: 'readonly', window: 'readonly', caches: 'readonly', MessageChannel: 'readonly', setTimeout: 'readonly', localStorage: 'readonly' },
     },
   },
   { files: ['scripts/**', '*.config.*'], languageOptions: { globals: { process: 'readonly', Buffer: 'readonly', URL: 'readonly', console: 'readonly', fetch: 'readonly' } } },

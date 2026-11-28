@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro';
+import Player from '../../components/Player.svelte';
+import SaveOffline from '../../components/SaveOffline.svelte';
+import { listSessions } from '../../lib/session-list';
+
+export function getStaticPaths() {
+  return listSessions().map((s) => ({ params: { slug: s.slug }, props: { session: s } }));
+}
+const { session } = Astro.props;
+const pagePath = `/sessions/${session.slug}/`;
+---
+<Base title={`${session.title} – The Island`}>
+  <main>
+    <p><a href="/">← Today's session</a></p>
+    <h1>{session.title}</h1>
+    <Player client:load src={session.audio} title={session.title} />
+    <SaveOffline client:load urls={[pagePath, session.audio]} />
+    <details class="transcript">
+      <summary>Transcript</summary>
+      {session.transcript.map((p) => <p>{p}</p>)}
+    </details>
+  </main>
+</Base>
+<style>
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-weight: 600; margin: 0 0 0.5rem; }
+  .transcript { margin-top: 2rem; }
+  summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+</style>
